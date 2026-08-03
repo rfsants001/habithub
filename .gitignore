@@ -1,0 +1,30 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Banco (SQLite)
+*.db
+*.db-journal
+*.sqlite3
+
+# Segredos / ambiente
+.env
+vapid_*.pem
+
+# HTMX baixado pra static/ (opcional — pode versionar se preferir offline-first)
+static/htmx.min.js
+
+# Repo de histórico de hábitos (F3) — é um repo git SEPARADO, nunca aninhado aqui
+historico-habitos/
+
+# Certificados locais (F5 — mkcert)
+*.pem
+!vapid_public.example.pem
+
+# SO / editor
+.DS_Store
+.idea/
+.vscode/

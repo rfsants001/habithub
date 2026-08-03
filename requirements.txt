@@ -1,0 +1,24 @@
+# HabitHub — dependências por fase (ver tecnologia/ferramentas na vault)
+# Instalar num venv único (sem torch → sem venv duplo, ADR-008).
+
+# --- F1: Grafo vivo ---
+fastapi
+uvicorn[standard]
+jinja2
+sqlalchemy[asyncio]
+aiosqlite
+pydantic            # v2
+python-multipart    # HTMX manda form data nos POST
+# HTMX não é pip: baixar htmx.min.js pra static/
+
+# --- F2: Streaks & stats (TDD leve) ---
+pytest
+pytest-asyncio
+
+# --- F3: Git de verdade ---
+# git CLI via subprocess (ADR-005) — sem pacote pip
+
+# --- F5: PWA + lembretes ---
+apscheduler
+pywebpush           # Web Push (+ VAPID keys, geradas 1x, fora do git)
+# mkcert + caddy: instalados no sistema, não via pip (HTTPS local, ADR-007)
