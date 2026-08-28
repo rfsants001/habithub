@@ -1,21 +1,22 @@
-# Python
-.venv/
-__pycache__/
-*.py[cod]
-*.egg-info/
-.pytest_cache/
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+npm-debug.log*
+
+# Cobertura de testes (gerada por `vitest run --coverage`)
+coverage/
 
 # Banco (SQLite)
 *.db
 *.db-journal
+*.db.bak
 *.sqlite3
 
 # Segredos / ambiente
 .env
 vapid_*.pem
-
-# HTMX baixado pra static/ (opcional — pode versionar se preferir offline-first)
-static/htmx.min.js
 
 # Repo de histórico de hábitos (F3) — é um repo git SEPARADO, nunca aninhado aqui
 historico-habitos/
@@ -28,3 +29,5 @@ historico-habitos/
 .DS_Store
 .idea/
 .vscode/
+.specs
+.claude
