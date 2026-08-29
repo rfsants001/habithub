@@ -1,0 +1,39 @@
+{
+  "name": "habithub",
+  "version": "1.0.0",
+  "description": "App de hábitos com a estética do contribution graph do GitHub — orquestrador dos pacotes api/ e web/",
+  "private": true,
+  "license": "ISC",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "tui": "node scripts/tui.mjs",
+    "start": "node scripts/tui.mjs",
+    "check": "node scripts/tui.mjs --check",
+
+    "dev": "node scripts/tui.mjs --dev",
+    "dev:api": "npm --prefix api run dev",
+    "dev:web": "npm --prefix web run dev",
+
+    "test": "npm --prefix api run test",
+    "test:watch": "npm --prefix api run test:watch",
+    "test:coverage": "npm --prefix api run test:coverage",
+
+    "typecheck": "npm run typecheck:api && npm run typecheck:web",
+    "typecheck:api": "npm --prefix api run typecheck",
+    "typecheck:web": "npm --prefix web run typecheck",
+    "lint": "npm --prefix web run lint",
+    "verify": "npm run typecheck && npm run lint && npm run test",
+
+    "build": "npm --prefix web run build",
+
+    "db:generate": "npm --prefix api run db:generate",
+    "db:migrate": "npm --prefix api run db:migrate",
+    "db:studio": "npm --prefix api run db:studio",
+    "seed": "npm --prefix api run seed",
+    "seed:demo": "npm --prefix api run seed:demo",
+
+    "setup": "npm --prefix api install && npm --prefix web install"
+  }
+}
