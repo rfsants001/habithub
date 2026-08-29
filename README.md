@@ -4,7 +4,7 @@
 
 Roda como **PWA mobile-first** servido na rede local: o hábito se marca no celular, o grafo pinta na hora.
 
-![status](https://img.shields.io/badge/status-F1%20arrancando-yellow) ![stack](https://img.shields.io/badge/stack-FastAPI%20%2B%20HTMX%20%2B%20SQLite-blue) ![python](https://img.shields.io/badge/python-3.14-3776AB) ![licença](https://img.shields.io/badge/uso-pessoal-lightgrey)
+![status](https://img.shields.io/badge/status-F1%20arrancando-yellow) ![stack](https://img.shields.io/badge/stack-React%20%2B%20Fastify%20%2B%20SQLite-blue) ![lang](https://img.shields.io/badge/TypeScript-3178C6) ![licença](https://img.shields.io/badge/uso-pessoal-lightgrey)
 
 ---
 
@@ -43,21 +43,21 @@ Cumprir hábitos depende de motivação — e motivação acaba. O que funciona 
 
 ## 🧱 Stack
 
-Python-first, server-rendered, mínimo de JavaScript.
+**JS/TS** — SPA React + API REST Node separadas (re-arquitetado 2026-08-15, era Python-first).
 
 | Camada | Escolha | Por quê |
 |--------|---------|---------|
-| Backend | **FastAPI** + **Uvicorn** | rotas + DI, retorna HTML |
-| ORM / DB | **SQLAlchemy async** + **aiosqlite** + **SQLite** | um arquivo, zero setup de servidor |
-| Templates | **Jinja2** | herança + macros do grafo |
-| Interação | **HTMX** | `hx-post`/`hx-target`/`hx-swap` repintam fragmentos sem reload — sem SPA |
+| Frontend | **Vite** + **React 19** + **TypeScript** | SPA; espelha o setup do Grimório |
+| Backend | **Fastify** + **TypeScript** (`tsx`) | API REST Node, rotas + hooks |
+| ORM / DB | **Drizzle ORM** + **better-sqlite3** + **SQLite** | TS-first, SQL-próximo, um arquivo |
+| Validação | **Zod** | schemas de body/params → DTO tipado |
 | Grafo | **CSS Grid puro** | 53×7 quadradinhos, sem lib de chart |
-| Validação | **Pydantic v2** | schemas dos forms |
-| Git real (F3) | **git CLI via subprocess** | "Python cola ferramenta externa" (mesmo padrão dos projetos irmãos) |
-| Lembretes (F5) | **APScheduler** + **pywebpush** | jobs de janela de horário + Web Push |
-| PWA (F5) | manifest + service worker + **mkcert/caddy** | HTTPS na rede local (pré-req de SW e Push) |
+| Testes | **Vitest** | domínio puro (streak, agregação do grafo) |
+| Git real (F3) | **`node:child_process`** (git CLI) | commit real com data retroativa |
+| Lembretes (F5) | **node-cron** + **web-push** | jobs de janela de horário + Web Push |
+| PWA (F5) | **vite-plugin-pwa** + **mkcert/caddy** | HTTPS na rede local (pré-req de SW e Push) |
 
-> **Um venv só** (sem torch → sem venv duplo, ADR-008).
+> **Dois `package.json`** (`api/`, `web/`), sem tooling de monorepo (ADR-008). Domínio puro isolado em `api/src/domain/` (ADR-009) — testável e campo de treino de DS&A.
 
 ---
 
@@ -110,43 +110,42 @@ erDiagram
 
 ```mermaid
 sequenceDiagram
-    participant C as 📱 Celular
-    participant S as FastAPI
-    participant DB as SQLite
-    participant G as grafo.py
+    participant C as 📱 React (web)
+    participant S as API Fastify
+    participant DB as SQLite (Drizzle)
+    participant G as domain/grafo.ts
 
-    C->>S: hx-post /habitos/{id}/commit
-    Note over C,S: hx-target=#grafo-saude<br/>hx-swap=outerHTML
-    S->>DB: grava Registro(habito, data=hoje, criado_em=agora)
-    Note right of S: (F3) git_habitos.commitar() → commit git real
+    C->>S: fetch POST /habitos/:id/commit  (JSON)
+    S->>S: Zod valida o body
+    S->>DB: grava Registro(habito, data=hoje, criadoEm=agora)
+    Note right of S: (F3) gitHabitos.commitar() → commit git real
     S->>G: montar(categoria) → matriz 53×7
-    G-->>S: contexto do template
-    S-->>C: só o fragmento <section id="grafo-saude"> repintado
-    Note over C: quadradinho de hoje escurece<br/>na hora, sem reload ← o AHÁ do EP01
+    G-->>S: MatrizCategoria
+    S-->>C: JSON { grafo }
+    Note over C: React repinta o grafo da categoria<br/>quadradinho de hoje escurece, sem reload ← o AHÁ do EP01
 ```
 
 ### Módulos
 
 ```mermaid
 graph TD
-    subgraph app[app/]
-        main[main.py<br/>rotas → HTML/fragmentos]
-        db[db.py<br/>engine async + session]
-        models[models.py<br/>Categoria · Habito · Registro · Meta]
-        schemas[schemas.py<br/>pydantic — forms]
-        grafo[grafo.py<br/>GROUP BY categoria,dia]
-        streaks[streaks.py<br/>calcular_streak — F2, TDD]
-        git[git_habitos.py<br/>commit git real — F3]
-        lembretes[lembretes.py<br/>APScheduler + Push — F5]
-        relatorio[relatorio.py<br/>agregação semanal — F6]
+    subgraph api[api/ — Fastify + TS]
+        routes[routes/<br/>categorias · habitos · commits]
+        domain[domain/ ⭐<br/>streak.ts · grafo.ts — puro, DS&A]
+        repos[repositories/<br/>Drizzle]
+        services[services/<br/>gitHabitos F3 · lembretes F5 · relatorio F6]
+        schemas[schemas/<br/>Zod]
+        dbmod[db/<br/>schema.ts · client · migrations]
     end
-    tpl[templates/<br/>base.html + macros do grafo]
-    static[static/<br/>CSS Grid · manifest · sw.js]
+    subgraph web[web/ — Vite + React + TS]
+        grafoC[components/Grafo.tsx<br/>CSS Grid 53×7]
+        commitC[components/BotaoCommit.tsx]
+        apiC[api/client.ts<br/>fetch tipado]
+    end
 
-    main --> db & schemas & grafo & streaks & git & lembretes & relatorio
-    grafo --> models
-    streaks --> models
-    main --> tpl --> static
+    routes --> schemas & domain & repos & services
+    repos --> dbmod
+    web -->|JSON REST| routes
 ```
 
 > ⚠️ A estrutura acima é o **alvo**, não código pronto. Ver [ADRs](#-decisões-de-arquitetura-adrs).
@@ -180,26 +179,64 @@ Cada fase = 1 arco fechado = 1 episódio da série *build-in-public*.
 
 ## 🚀 Setup (F1)
 
-> Requer Python 3.14 do sistema. ⚠️ Se algum wheel (pydantic v2 é o candidato) ainda não existir pro 3.14, criar o venv com 3.12/3.13 — é um venv só, sem custo.
+> Requer Node.js LTS (≥ 20). Dois pacotes: `api/` (Fastify) e `web/` (Vite+React). O código do app é do Rafael (modo tutor-review).
 
 ```bash
 git clone <este-repo> ~/dev/habithub
 cd ~/dev/habithub
-
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-
-# baixar htmx.min.js pra static/ (HTMX não é pip)
-
-uvicorn app.main:app --reload   # http://127.0.0.1:8000
+npm run setup      # instala api/ e web/
 ```
+
+### 📦 Comandos (todos da raiz — não precisa entrar nas pastas)
+
+O `package.json` da raiz é um **orquestrador**: não tem dependência nenhuma e delega pros dois pacotes com `npm --prefix`. **Não usa workspaces** — `api/` e `web/` continuam independentes (ADR-008).
+
+| Comando | O que faz |
+|---|---|
+| `npm start` / `npm run tui` | abre a **TUI** (tudo em um lugar) |
+| `npm run dev` | sobe API + Web no **painel split** |
+| `npm run dev:api` · `npm run dev:web` | sobe um só, saída crua |
+| `npm test` · `test:watch` · `test:coverage` | Vitest na `api/` |
+| `npm run typecheck` | `tsc` nos **dois** pacotes |
+| `npm run lint` | oxlint no `web/` |
+| **`npm run verify`** | typecheck + lint + testes — **o gate do PR** |
+| `npm run db:generate` · `db:migrate` · `db:studio` | Drizzle |
+| `npm run seed` · `seed:demo` | popula o banco |
+| `npm run build` | build de produção do `web/` |
+| `npm run check` | diagnóstico do projeto, sem abrir a TUI |
+
+<details>
+<summary>Como os pacotes foram criados (histórico)</summary>
+
+```bash
+# --- API (Fastify + TS + Drizzle) ---
+mkdir api && cd api && npm init -y
+npm i fastify @fastify/cors drizzle-orm better-sqlite3 zod
+npm i -D typescript tsx drizzle-kit @types/better-sqlite3 @types/node vitest
+npm i -D pino-pretty @vitest/coverage-v8
+cd ..
+
+# --- WEB (Vite + React + TS) — igual ao Grimório ---
+npm create vite@latest web -- --template react-ts
+cd web && npm i && cd ..
+```
+</details>
+
+### 🎛️ A TUI — todo comando mora aqui
+
+```bash
+./scripts/habithub
+```
+
+CLI gráfica que centraliza o projeto: sobe **API e Web em painéis lado a lado** com os logs separados, roda testes (todos, um arquivo específico, watch), mostra **coverage total ou por arquivo com as linhas descobertas**, e cuida de migrations, seed e typecheck/lint. Zero dependências — só Node. Detalhes em [`scripts/README.md`](scripts/README.md).
+
+`./scripts/habithub --check` mostra o estado do projeto sem abrir a interface.
 
 ### Servir na rede local (marcar no celular)
 
 ```bash
-# F1–F4 (HTTP):
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-# descobrir o IP com `ip addr` → acessar http://192.168.x.x:8000 no celular
+# F1–F4 (HTTP): API em host 0.0.0.0 (:3000) + Vite --host (:5173, proxy /api → :3000)
+#   descobrir o IP com `ip addr` → acessar http://192.168.x.x:5173 no celular
 
 # F5 (HTTPS — obrigatório pro PWA/Web Push):
 mkcert -install
@@ -213,20 +250,21 @@ mkcert 192.168.x.x localhost      # gera cert local confiável
 
 | ADR | Decisão | Resumo |
 |-----|---------|--------|
-| **001** ⭐ | Server-rendered (Jinja2 + HTMX), JS mínimo | HTMX troca fragmentos de HTML; nada de SPA/bundler |
+| **001** ⭐ | **SPA React (Vite) + API REST Node (Fastify)** *(revertido 15/08)* | era server-rendered; agora front/back separados por JSON — ensaia o padrão da Nyx |
 | **002** ⭐ | Grafo = **um por categoria**, empilhados (CSS Grid) | "cada canto da vida com sua cor"; leitura imediata; `GROUP BY` simples |
-| **003** | Streak é **derivado**, não persistido | `calcular_streak(datas)`; fonte única = histórico de `Registro` |
-| **004** | "Commit" (domínio) = model `Registro` (código) | evita colisão com git e `session.commit()` |
-| **005** | Git real via **subprocess** (git CLI), não GitPython | `GIT_AUTHOR_DATE`/`GIT_COMMITTER_DATE` fixam a data retroativa |
-| **006** ⭐ | **Sem punição é arquitetural** | nenhuma penalidade no modelo; falha = ausência de `Registro` |
+| **003** | Streak é **derivado**, não persistido | `calcularStreak(datas)`; fonte única = histórico de `registros` |
+| **004** | "Commit" (domínio) = tabela/tipo `Registro` (código) | evita colisão com git |
+| **005** | Git real via **`child_process`** (git CLI) | `GIT_AUTHOR_DATE`/`GIT_COMMITTER_DATE` fixam a data retroativa |
+| **006** ⭐ | **Sem punição é arquitetural** | nenhuma penalidade no modelo; falha = ausência de `registro` |
 | **007** | PWA na rede local exige **HTTPS** (F5) | SW e Web Push só em contexto seguro → mkcert/caddy |
-| **008** | Roda no **Python do sistema** (sem venv duplo) | sem torch/IA → um venv só |
+| **008** | Repo **`web/` + `api/` separados**, sem monorepo | dois `package.json`; evita overhead que pioraria o Problema B |
+| **009** | **Domínio puro isolado** (`api/src/domain/`) | streak/grafo sem framework → testável (Vitest) + campo de DS&A |
 
 ---
 
 ## 🔀 Fluxo de trabalho
 
-Projeto de prática de Python em **modo tutor-review** (SDD + GitHub Flow):
+Projeto de prática de **JS/TS/Node** em **modo tutor-review** (SDD + GitHub Flow):
 
 ```mermaid
 flowchart LR
@@ -248,20 +286,23 @@ flowchart LR
 
 ```
 habithub/
-├── app/                 # código do app (a escrever nas fases)
-│   ├── main.py          # FastAPI + rotas
-│   ├── db.py            # engine/session async
-│   ├── models.py        # Categoria · Habito · Registro · Meta
-│   ├── schemas.py       # pydantic
-│   ├── grafo.py         # agregação por (categoria, dia)
-│   ├── streaks.py       # calcular_streak (F2)
-│   ├── git_habitos.py   # commit git real (F3)
-│   ├── lembretes.py     # APScheduler + Web Push (F5)
-│   └── relatorio.py     # agregação semanal (F6)
-├── templates/           # base.html + macros do grafo (Jinja)
-├── static/              # CSS (Grid do grafo), manifest.json, sw.js (F5)
-├── tests/               # pytest (calcular_streak primeiro — F2)
-├── requirements.txt
+├── api/                     # Backend — Fastify + TypeScript
+│   ├── src/
+│   │   ├── server.ts        # bootstrap Fastify (CORS, rotas, errors)
+│   │   ├── routes/          # categorias · habitos · commits
+│   │   ├── domain/ ⭐        # streak.ts · grafo.ts — puro, testável, DS&A
+│   │   ├── repositories/    # acesso a dados (Drizzle)
+│   │   ├── services/        # gitHabitos (F3) · lembretes (F5) · relatorio (F6)
+│   │   ├── schemas/         # Zod
+│   │   └── db/              # schema.ts · client · migrations
+│   ├── package.json
+│   └── tsconfig.json
+├── web/                     # Frontend — Vite + React + TS
+│   ├── src/
+│   │   ├── components/      # Grafo.tsx (CSS Grid) · BotaoCommit.tsx · Form*.tsx
+│   │   ├── api/client.ts    # fetch tipado
+│   │   └── styles/
+│   └── package.json
 ├── .gitignore
 └── README.md
 ```
