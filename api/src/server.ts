@@ -2,6 +2,8 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 
 import { loggerOptions } from "./logger";
+import { categoryRoutes } from "./routes/categories";
+import { habitsRoutes } from "./routes/habits";
 
 export function createServer() {
   const app = Fastify({ logger: loggerOptions });
@@ -27,6 +29,9 @@ app
     app.log.error(err, "api.failed");
     process.exit(1);
   });
+
+app.register(categoryRoutes, { prefix: "/categories" });
+app.register(habitsRoutes, { prefix: "/habits" });
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, async () => {
