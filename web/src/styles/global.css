@@ -11,15 +11,6 @@
   --accent: #2ea043;
   --danger: #f85149;
 
-  /* Escala de intensidade do grafo (ADR-002).
-     O nível 0 é fixo; 1–4 derivam do --hue da categoria, definido inline no
-     componente, para que a cor saia 100% do CSS (PH-1-007). */
-  --level-0: #161b22;
-  --level-1: hsl(var(--hue, 120) 55% 20%);
-  --level-2: hsl(var(--hue, 120) 60% 30%);
-  --level-3: hsl(var(--hue, 120) 65% 42%);
-  --level-4: hsl(var(--hue, 120) 70% 55%);
-
   --radius: 6px;
   --gap: 12px;
 
