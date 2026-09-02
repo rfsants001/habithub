@@ -1,0 +1,25 @@
+meta {
+  name: GET health
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/health
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.status: eq ok
+}
+
+docs {
+  PH-1-001 — prova que a stack sobe.
+
+  Contrato atual do código: 200 `{ "status": "ok" }`.
+  A spec PH-1-001 diz `{ "ok": true }` — divergência ainda em aberto.
+
+  Não deve aparecer no log da API: o handler usa `logLevel: 'silent'`.
+}

@@ -1,0 +1,33 @@
+meta {
+  name: POST habits com categoria inexistente -> 404 ⏳
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/habits
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Órfão",
+    "categoryId": 999999
+  }
+}
+
+assert {
+  res.status: eq 404
+}
+
+docs {
+  ⏳ PH-1-004 / PH-1-009.
+
+  Hoje devolve **500** com `SQLITE_CONSTRAINT_FOREIGNKEY`: a FK do banco
+  segura (o que é ótimo), mas o erro vaza cru como se fosse falha do servidor.
+
+  O done-when da PH-1-004 pede 404 — a rota tem que checar se a categoria
+  existe antes de inserir. É um caso em que a trava do banco está certa e a
+  tradução pro HTTP é que falta.
+}

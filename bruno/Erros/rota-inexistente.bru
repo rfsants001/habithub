@@ -1,0 +1,26 @@
+meta {
+  name: GET rota-que-nao-existe -> 404 ⏳
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/rota-que-nao-existe
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 404
+}
+
+tests {
+  test("404 em JSON, não o HTML padrão do Fastify", function() {
+    expect(res.getBody()).to.be.an("object");
+    expect(res.getBody().error).to.be.a("string");
+  });
+}
+
+docs {
+  ⏳ PH-1-009 — precisa do `setNotFoundHandler`.
+}

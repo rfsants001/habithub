@@ -1,0 +1,25 @@
+meta {
+  name: DELETE categories/:id -> 204
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{baseUrl}}/categories/{{categoryId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  Apaga a categoria criada na pasta Categories, fechando o ciclo: rodar a
+  collection inteira deixa o banco como estava.
+
+  Estes dois DELETEs moram aqui, e não nas pastas dos seus recursos, porque a
+  ordem importa. O Bruno executa pasta por pasta, então um DELETE no fim de
+  Categories rodaria ANTES de Habits — apagaria a categoria e o POST de hábito
+  cairia com erro de foreign key.
+}

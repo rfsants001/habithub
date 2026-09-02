@@ -1,0 +1,41 @@
+meta {
+  name: POST habits
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/habits
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Academia",
+    "categoryId": {{categoryId}}
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setVar("habitId", res.getBody().id);
+  }
+}
+
+tests {
+  test("nasce ligado à categoria enviada", function() {
+    expect(res.getBody().categoryId).to.equal(Number(bru.getVar("categoryId")));
+  });
+}
+
+docs {
+  Depende do `categoryId` que o POST de Categories guardou. Rode aquele antes,
+  ou defina a variável na mão.
+
+  Guarda o `habitId` para o commit e para o DELETE.
+}

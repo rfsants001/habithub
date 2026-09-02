@@ -1,0 +1,47 @@
+meta {
+  name: POST categories
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/categories
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Saúde",
+    "colorHue": 120
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setVar("categoryId", res.getBody().id);
+  }
+}
+
+tests {
+  test("devolve a categoria criada com id", function() {
+    expect(res.getBody().id).to.be.a("number");
+  });
+
+  test("o colorHue enviado foi persistido", function() {
+    expect(res.getBody().colorHue).to.equal(120);
+  });
+}
+
+docs {
+  Guarda o `id` na variável `categoryId`, usada pelo grafo, pelo POST de hábito
+  e pelo DELETE mais abaixo.
+
+  O teste do `colorHue` não é decoração: mande 210 no body e confira que volta
+  210. Se voltar 120 (o default da coluna), o valor está sendo descartado no
+  caminho de novo.
+}

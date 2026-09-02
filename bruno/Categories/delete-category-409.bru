@@ -1,0 +1,29 @@
+meta {
+  name: DELETE categories/1 -> 409 (tem hábitos)
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/categories/1
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 409
+}
+
+tests {
+  test("explica por que bloqueou", function() {
+    expect(res.getBody().error).to.be.a("string");
+  });
+}
+
+docs {
+  D1 / FN-003 — apagar categoria que ainda tem hábitos é **bloqueado**, não
+  cascateado. Histórico não se destrói em silêncio.
+
+  Usa o id 1 fixo de propósito: é a categoria semeada que tem hábito. Se você
+  limpou o banco, ajuste o id ou rode o seed antes.
+}

@@ -1,0 +1,40 @@
+meta {
+  name: POST categories body inválido -> 400 ⏳
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/categories
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "",
+    "colorHue": 999
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+tests {
+  test("mensagem em português, pronta pro form (FN-014)", function() {
+    expect(res.getBody().error).to.be.a("string");
+  });
+
+  test("fields diz qual campo errou", function() {
+    expect(res.getBody().fields).to.be.an("array");
+  });
+}
+
+docs {
+  ⏳ PH-1-009 — hoje isto devolve **500** com o JSON cru do ZodError no campo
+  `message`, porque ainda não existe `setErrorHandler`.
+
+  Dois erros de uma vez no body: nome vazio e hue fora de 0–360. Serve pra
+  conferir que `fields` lista os dois, não só o primeiro.
+}

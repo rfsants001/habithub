@@ -1,0 +1,24 @@
+meta {
+  name: POST habits/:id/commit sem body ⏳
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/habits/{{habitId}}/commit
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 201
+}
+
+docs {
+  ⏳ PH-1-008 — `message` é opcional.
+
+  Sem corpo nenhum, `request.body` chega `undefined` e o `.parse()` explodiria.
+  Por isso a rota faz `createCommitSchema.parse(request.body ?? {})`.
+
+  Se der 400 ou 500 aqui, é esse `?? {}` que está faltando.
+}

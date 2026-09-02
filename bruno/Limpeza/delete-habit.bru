@@ -1,0 +1,22 @@
+meta {
+  name: DELETE habits/:id -> 204
+  type: http
+  seq: 1
+}
+
+delete {
+  url: {{baseUrl}}/habits/{{habitId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  Apaga o hábito criado na pasta Habits.
+
+  Vem antes do DELETE da categoria de propósito: enquanto este hábito existir,
+  aquele devolve 409 (D1 — categoria com hábitos não se apaga).
+}

@@ -1,0 +1,31 @@
+meta {
+  name: GET categories/9999/graph -> 404 ⏳
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/categories/9999/graph
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 404
+}
+
+tests {
+  test("erro em português, sem stack trace", function() {
+    const b = res.getBody();
+    expect(b.error).to.be.a("string");
+    expect(JSON.stringify(b)).to.not.include("at ");
+  });
+}
+
+docs {
+  ⏳ PH-1-007 / FN-013.
+
+  O que se verifica aqui não é só o 404: é que a resposta de erro tem o mesmo
+  formato `{ error }` que o form do front sabe exibir, e que nada de stack
+  trace vaza.
+}

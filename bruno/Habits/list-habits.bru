@@ -1,0 +1,40 @@
+meta {
+  name: GET habits
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/habits
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("devolve uma lista", function() {
+    expect(res.getBody()).to.be.an("array");
+  });
+
+  test("o hábito vem plano, não aninhado no join", function() {
+    const primeiro = res.getBody()[0];
+    if (!primeiro) return;
+    expect(primeiro, "shape do item").to.not.have.property("habits");
+    expect(primeiro.name).to.be.a("string");
+    expect(primeiro.categoryId).to.be.a("number");
+  });
+}
+
+docs {
+  ⚠️ O segundo teste falha hoje, e está certo em falhar.
+
+  O `habitsRepository.list()` usa `innerJoin` sem `select()`, então o Drizzle
+  devolve `{ habits: {...}, categories: {...} }` em vez do objeto plano. O tipo
+  `Habit` do `web/src/api/client.ts` declara o formato plano — ou seja, front e
+  API discordam e o TypeScript não tem como perceber.
+
+  Some quando o repositório passar a projetar as colunas explicitamente.
+}

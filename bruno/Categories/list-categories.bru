@@ -1,0 +1,45 @@
+meta {
+  name: GET categories
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/categories
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("devolve uma lista", function() {
+    expect(res.getBody()).to.be.an("array");
+  });
+
+  test("toda categoria tem colorHue (0-360)", function() {
+    res.getBody().forEach(function(c) {
+      expect(c.colorHue, "colorHue de " + c.name).to.be.a("number");
+      expect(c.colorHue).to.be.within(0, 360);
+    });
+  });
+
+  test("createdAt não volta null", function() {
+    res.getBody().forEach(function(c) {
+      expect(c.createdAt, "createdAt de " + c.name).to.not.be.null;
+    });
+  });
+}
+
+docs {
+  Os dois últimos testes existem por causa de bugs reais que já aconteceram:
+
+  - `colorHue` era validado pelo Zod e descartado em silêncio pelo Drizzle,
+    porque a coluna `color_hue` não existia na tabela.
+  - `createdAt` voltava `null`: a coluna era `integer(mode:'timestamp')` com
+    default `CURRENT_TIMESTAMP`, que no SQLite gera uma string.
+
+  Os dois foram corrigidos por migration. Estes testes são a trava.
+}
