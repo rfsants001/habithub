@@ -1,4 +1,4 @@
-import { formatDate } from "../date";
+import { formatDate } from "../db/date";
 
 export type GraphEntry = {
   date: string;
