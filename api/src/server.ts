@@ -13,6 +13,10 @@ export function createServer() {
   app.get("/health", { logLevel: "silent" }, async () => {
     return { status: "ok" };
   });
+
+  app.register(categoryRoutes, { prefix: "/categories" });
+  app.register(habitsRoutes, { prefix: "/habits" });
+
   return app;
 }
 
@@ -29,9 +33,6 @@ app
     app.log.error(err, "api.failed");
     process.exit(1);
   });
-
-app.register(categoryRoutes, { prefix: "/categories" });
-app.register(habitsRoutes, { prefix: "/habits" });
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, async () => {
