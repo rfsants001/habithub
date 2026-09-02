@@ -1,0 +1,35 @@
+[
+  {
+    "_id": "5be3b907-c8c2-42aa-966b-e0f91ee6ba28",
+    "colId": "1edaa908-54dd-46ee-aed8-1863850dc53e",
+    "containerId": "6e713829-2fec-4096-953a-27aa9e4058df",
+    "name": "GET /health",
+    "url": "{{baseUrl}}/health",
+    "method": "GET",
+    "sortNum": 10000,
+    "created": "2026-08-31T03:23:00.000Z",
+    "modified": "2026-08-31T03:23:00.000Z",
+    "headers": [],
+    "params": [],
+    "body": {
+      "type": "none",
+      "raw": "",
+      "form": []
+    },
+    "tests": [
+      {
+        "type": "res-code",
+        "custom": "",
+        "action": "equal",
+        "value": "200"
+      },
+      {
+        "type": "json-query",
+        "custom": "json.status",
+        "action": "equal",
+        "value": "ok"
+      }
+    ],
+    "docs": "PH-1-001 — prova que a stack sobe.\n\nContrato atual do codigo: 200 { \"status\": \"ok\" }\n(A spec PH-1-001 dizia { \"ok\": true } — divergencia a resolver.)\n\nNao deve aparecer no log: o handler usa logLevel 'silent'."
+  }
+]

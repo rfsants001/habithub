@@ -1,0 +1,6 @@
+{
+  // Thunder Client: guarda a collection em .vscode/thunder-tests/ (versionada no git),
+  // em vez do storage global do VS Code. Sem isto a extensao NAO enxerga os arquivos.
+  "thunder-client.saveToWorkspace": true,
+  "thunder-client.saveRequestOnSend": false
+}

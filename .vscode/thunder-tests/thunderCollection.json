@@ -1,0 +1,36 @@
+[
+  {
+    "_id": "1edaa908-54dd-46ee-aed8-1863850dc53e",
+    "colName": "HabitHub API",
+    "created": "2026-08-31T03:23:00.000Z",
+    "sortNum": 10000,
+    "folders": [
+      {
+        "_id": "6e713829-2fec-4096-953a-27aa9e4058df",
+        "name": "Health",
+        "containerId": "",
+        "created": "2026-08-31T03:23:00.000Z",
+        "sortNum": 10000
+      }
+    ],
+    "settings": {
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "options": {
+        "baseUrl": ""
+      },
+      "tests": [
+        {
+          "type": "res-time",
+          "custom": "",
+          "action": "<",
+          "value": "1000"
+        }
+      ]
+    }
+  }
+]
