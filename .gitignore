@@ -28,6 +28,9 @@ historico-habitos/
 # SO / editor
 .DS_Store
 .idea/
-.vscode/
+.vscode/*
+# ...menos a collection do Thunder Client e o setting que a habilita:
+!.vscode/thunder-tests/
+!.vscode/settings.json
 .specs
 .claude
