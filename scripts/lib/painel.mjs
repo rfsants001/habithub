@@ -91,14 +91,26 @@ export function abrirPainel(servicos, { ip, aoSairParaTmux }) {
       tela.escrever(pintar('  ' + atalhos.map(([k, d]) => `${k} ${d}`).join(' · '), C.cinza))
     }
 
-    function encerrar(destino = 'menu') {
+    let encerrando = false
+
+    /** Só resolve depois que todo serviço morreu — quem vem depois (menu, tmux,
+     *  ou outro start) precisa das portas 3000/5173 livres. */
+    async function encerrar(destino = 'menu', aoFinalizar) {
+      if (encerrando) return // 'q' repetido não deve disparar duas rodadas de kill
+      encerrando = true
+
       clearInterval(timer)
       clearInterval(relogio)
       process.stdout.off('resize', marcarSujo)
       descartes.forEach((d) => d())
       pararTeclas()
-      for (const s of servicos) s.parar()
+
       tela.limpar()
+      tela.escrever(pintar('\n  parando os serviços…\n', C.cinza))
+      await Promise.all(servicos.map((s) => s.parar()))
+
+      tela.limpar()
+      if (aoFinalizar) await aoFinalizar()
       resolve(destino)
     }
 
@@ -114,14 +126,8 @@ export function abrirPainel(servicos, { ip, aoSairParaTmux }) {
           foco = i + 1 < servicos.length ? servicos[i + 1].nome : null
           return marcarSujo()
         }
-        case 't': {
-          clearInterval(timer); clearInterval(relogio)
-          descartes.forEach((d) => d())
-          pararTeclas()
-          for (const s of servicos) s.parar()
-          tela.limpar()
-          return aoSairParaTmux().then(() => resolve('menu'))
-        }
+        // o tmux sobe os mesmos servidores: só depois que estes soltarem as portas
+        case 't': return encerrar('menu', aoSairParaTmux)
         default: return undefined
       }
     })
