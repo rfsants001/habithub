@@ -5,7 +5,8 @@ import { InferSelectModel } from "drizzle-orm";
 export const categories = sqliteTable("categories", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  colorHue: integer("color_hue").notNull().default(120),
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -18,7 +19,7 @@ export const habits = sqliteTable("habits", {
     .references(() => categories.id),
   windowStart: text("window_start"),
   windowEnd: text("window_end"),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });

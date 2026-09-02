@@ -7,7 +7,7 @@ import * as schema from "./schema";
 const log = pino(loggerOptions).child({ module: "db" });
 const DATABASE_FILE = process.env.DB_FILE ?? "habithub.db";
 const sqlite = new Database(DATABASE_FILE);
-sqlite.pragma("forein_keys = ON");
+sqlite.pragma("foreign_keys = ON");
 
 log.info({ file: DATABASE_FILE, foreignKeys: true }, "db.connected");
 

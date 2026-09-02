@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1788308884665,
+      "tag": "0000_smart_absorbing_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788322041824,
+      "tag": "0001_sticky_moira_mactaggert",
+      "breakpoints": true
+    }
+  ]
+}
