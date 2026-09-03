@@ -2,9 +2,54 @@ import type { FastifyInstance } from "fastify";
 import { categoriesRepository } from "../repositories/categories";
 import { createCategorySchema } from "../schemas/category";
 import { idParamSchema } from "../schemas/common";
+import { findEntriesOfYearByCategory } from "../repositories/entries";
+import { buildGraph } from "../domain/graph";
 
 export async function categoryRoutes(app: FastifyInstance) {
   app.get("/", async () => categoriesRepository.list());
+
+  app.get("/:id/graph", async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+
+    const category = categoriesRepository.findById(id);
+    if (!category) {
+      req.log.warn({ categoryId: id }, "category.not-found");
+      return res.code(404).send({ error: "Categoria não encontrada" });
+    }
+
+    const year = new Date().getFullYear();
+    const queryStartedAt = performance.now();
+    const entries = findEntriesOfYearByCategory(id, year);
+    const queryMs = performance.now() - queryStartedAt;
+
+    const aggregationStartedAt = performance.now();
+    const weeks = buildGraph(entries, year);
+    const aggregationMs = performance.now() - aggregationStartedAt;
+
+    const metrics = {
+      categoryId: id,
+      year,
+      totalEntries: entries.length,
+      daysWithCommit: weeks.flat().filter((day) => day && day.total > 0).length,
+      weeks: weeks.length,
+      queryMs: Math.round(queryMs),
+      aggregationMs: Math.round(aggregationMs),
+    };
+
+    req.log.debug(metrics, "graph.built");
+
+    if (queryMs + aggregationMs > 50) req.log.warn(metrics, "graph.slow");
+
+    return {
+      category: {
+        id: category.id,
+        name: category.name,
+        colorHue: category.colorHue,
+      },
+      year,
+      weeks,
+    };
+  });
 
   app.post("/", async (req, res) => {
     const input = createCategorySchema.parse(req.body);

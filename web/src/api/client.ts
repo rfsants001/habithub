@@ -14,6 +14,17 @@ export type Habit = {
   active: boolean;
 };
 
+export type Level = 0 | 1 | 2 | 3 | 4;
+export type Day = { date: string; total: number; level: Level };
+export type GraphResponse = {
+  category: { id: number; name: string; colorHue: number };
+  year: number;
+  weeks: (Day | null)[][];
+};
+
+export const fetchGraph = (categoryId: number) =>
+  request<GraphResponse>(`/categories/${categoryId}/graph`);
+
 export class ApiError extends Error {
   status: number;
 
