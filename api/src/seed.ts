@@ -29,13 +29,44 @@ function ensureHabit(name: string, categoryId: number) {
 }
 
 function seed() {
+  let created = 0;
+  let existed = 0;
+
   for (const item of REAL_CATEGORIES) {
+    const categoryBefore = db
+      .select()
+      .from(categories)
+      .where(eq(categories.name, item.name))
+      .get();
     const category = ensureCategory(item.name, item.colorHue);
+
+    if (categoryBefore) {
+      existed++;
+      console.log(`  ↺ categoria "${item.name}" já existia (id ${category.id})`);
+    } else {
+      created++;
+      console.log(`  ✚ categoria "${item.name}" criada (id ${category.id})`);
+    }
+
     for (const habitName of item.habits) {
-      ensureHabit(habitName, category.id);
+      const habitBefore = db
+        .select()
+        .from(habits)
+        .where(and(eq(habits.name, habitName), eq(habits.categoryId, category.id)))
+        .get();
+      const habit = ensureHabit(habitName, category.id);
+
+      if (habitBefore) {
+        existed++;
+        console.log(`    ↺ hábito "${habitName}" já existia (id ${habit.id})`);
+      } else {
+        created++;
+        console.log(`    ✚ hábito "${habitName}" criado (id ${habit.id})`);
+      }
     }
   }
-  console.log("✅ categorias e hábitos garantidos");
+
+  console.log(`\n✅ seed: ${created} criado(s), ${existed} já existia(m)`);
 }
 
 seed();

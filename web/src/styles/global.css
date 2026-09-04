@@ -1,8 +1,4 @@
-/* Base do HabitHub — mobile-first, tema escuro fixo (a estética é o grafo do GitHub).
-   Só tokens e primitivos aqui; estilo de componente mora junto do componente. */
-
 :root {
-  /* Superfícies e texto */
   --bg: #0d1117;
   --surface: #161b22;
   --border: #30363d;
@@ -51,8 +47,6 @@ a {
   color: var(--accent);
 }
 
-/* --- Primitivos de formulário ---------------------------------------- */
-
 input,
 select,
 button,
@@ -96,13 +90,10 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Mensagem de erro vinda da API (FN-014) — sempre visível, nunca só no console. */
 [role="alert"] {
   color: var(--danger);
   font-size: 0.875rem;
 }
-
-/* --- Layout ----------------------------------------------------------- */
 
 .app {
   max-width: 900px;
@@ -156,4 +147,10 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: var(--gap);
+}
+
+.habit-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

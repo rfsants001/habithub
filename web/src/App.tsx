@@ -40,6 +40,13 @@ export default function App() {
     }
   }, [categories]);
 
+  function archiveHabit(id: number) {
+    api
+      .archiveHabit(id, false)
+      .then(reloadHabits)
+      .catch(console.error);
+  }
+
   function handleCommit(response: CommitResponse) {
     const category = categories.find((c) => c.id === response.categoryId);
     if (!category) return;
@@ -107,10 +114,18 @@ export default function App() {
                     {categoryHabits.map((habit) => (
                       <li key={habit.id}>
                         <span>{habit.name}</span>
-                        <CommitButton
-                          habitId={habit.id}
-                          onCommit={handleCommit}
-                        />
+                        <span className="habit-actions">
+                          <CommitButton
+                            habitId={habit.id}
+                            onCommit={handleCommit}
+                          />
+                          <button
+                            onClick={() => archiveHabit(habit.id)}
+                            title="Arquivar — o histórico continua no grafo"
+                          >
+                            Arquivar
+                          </button>
+                        </span>
                       </li>
                     ))}
                   </ul>

@@ -1,3 +1,5 @@
+import { pathToFileURL } from "node:url";
+
 import Fastify from "fastify";
 import type { FastifyError } from "fastify";
 import { ZodError } from "zod";
@@ -66,26 +68,32 @@ export function createServer() {
   return app;
 }
 
-const app = createServer();
-const port = Number(process.env.PORT ?? 3000);
+const executadoDireto =
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
 
-app
-  .listen({ port, host: "0.0.0.0" })
-  .then((address) =>
-    app.log.info(
-      { address, pid: process.pid, node: process.version },
-      "api.started",
-    ),
-  )
-  .catch((err) => {
-    app.log.error(err, "api.start-failed");
-    process.exit(1);
-  });
+if (executadoDireto) {
+  const app = createServer();
+  const port = Number(process.env.PORT ?? 3000);
 
-for (const signal of ["SIGINT", "SIGTERM"] as const) {
-  process.on(signal, async () => {
-    app.log.info({ signal }, "api.shutting-down");
-    await app.close();
-    process.exit(0);
-  });
+  app
+    .listen({ port, host: "0.0.0.0" })
+    .then((address) =>
+      app.log.info(
+        { address, pid: process.pid, node: process.version },
+        "api.started",
+      ),
+    )
+    .catch((err) => {
+      app.log.error(err, "api.start-failed");
+      process.exit(1);
+    });
+
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.on(signal, async () => {
+      app.log.info({ signal }, "api.shutting-down");
+      await app.close();
+      process.exit(0);
+    });
+  }
 }

@@ -15,6 +15,13 @@
       "when": 1788322041824,
       "tag": "0001_sticky_moira_mactaggert",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788489851013,
+      "tag": "0002_quiet_ben_urich",
+      "breakpoints": true
     }
   ]
 }

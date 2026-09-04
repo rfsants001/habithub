@@ -128,8 +128,15 @@ export class Servico {
       // Escalonamento: dev server que ignora SIGTERM (ou trava fechando socket)
       // deixaria a porta ocupada e o próximo start falharia. 2s e vai SIGKILL.
       const kill = setTimeout(() => sinalizar('SIGKILL'), PRAZO_SIGKILL)
-      // Nem o SIGKILL pode travar a TUI pra sempre — avisa e segue.
+      // Nem o SIGKILL pode travar a TUI pra sempre — avisa e segue. Como o
+      // 'exit' nunca veio, é aqui que largamos o filho: sem isso o estado fica
+      // 'rodando' pra sempre e o próximo iniciar() cai no guard e não sobe nada.
       const desistir = setTimeout(() => {
+        if (this.filho === filho) {
+          this.estado = 'falhou'
+          this.filho = null
+          vivos.delete(this)
+        }
         this.#anotar(`\n[${this.nome}] não morreu nem com SIGKILL — confira a porta ${this.porta ?? '?'}\n`, 'erro')
         pronto()
       }, PRAZO_SIGKILL + 1000)

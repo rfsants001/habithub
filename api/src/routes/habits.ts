@@ -1,11 +1,32 @@
 import type { FastifyInstance } from "fastify";
 import { categoriesRepository } from "../repositories/categories";
 import { habitsRepository } from "../repositories/habits";
-import { createHabitSchema } from "../schemas/habit";
+import {
+  createHabitSchema,
+  listHabitsQuerySchema,
+  updateHabitSchema,
+} from "../schemas/habit";
 import { idParamSchema } from "../schemas/common";
 
 export async function habitsRoutes(app: FastifyInstance) {
-  app.get("/", async () => habitsRepository.list());
+  app.get("/", async (req) => {
+    const { includeArchived } = listHabitsQuerySchema.parse(req.query);
+    return habitsRepository.list({ includeArchived });
+  });
+
+  app.patch("/:id", async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const { active } = updateHabitSchema.parse(req.body);
+
+    if (!habitsRepository.findById(id)) {
+      req.log.warn({ habitId: id }, "habit.not-found");
+      return res.code(404).send({ error: "Hábito não encontrado" });
+    }
+
+    const habit = habitsRepository.setActive(id, active);
+    req.log.info({ habitId: id, active }, "habit.archived");
+    return res.send(habit);
+  });
 
   app.post("/", async (req, res) => {
     const input = createHabitSchema.parse(req.body);

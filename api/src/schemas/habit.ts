@@ -6,3 +6,16 @@ export const createHabitSchema = z.object({
 });
 
 export type CreateHabit = z.infer<typeof createHabitSchema>;
+
+export const updateHabitSchema = z.object({
+  active: z.boolean(),
+});
+
+export type UpdateHabit = z.infer<typeof updateHabitSchema>;
+
+export const listHabitsQuerySchema = z.object({
+  includeArchived: z
+    .enum(["true", "false"], "Use includeArchived=true ou false")
+    .default("false")
+    .transform((valor) => valor === "true"),
+});

@@ -19,6 +19,7 @@ export const habits = sqliteTable("habits", {
     .references(() => categories.id),
   windowStart: text("window_start"),
   windowEnd: text("window_end"),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

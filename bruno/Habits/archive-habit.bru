@@ -1,0 +1,42 @@
+meta {
+  name: PATCH habits/:id arquivar
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/habits/{{habitId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "active": false
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("devolve o hábito com active false", function() {
+    expect(res.getBody().active).to.equal(false);
+  });
+}
+
+docs {
+  Arquivar é a resposta ao impasse do DELETE: um hábito com commits não pode
+  ser apagado (409, para não destruir histórico), mas precisa poder sumir da
+  tela. O `PATCH` resolve sem tocar nas entries — o grafo continua pintado.
+
+  Depois deste request:
+  - `GET /habits` não traz mais este hábito
+  - `GET /habits?includeArchived=true` traz, com `active: false`
+  - `GET /categories/:id/graph` continua idêntico
+
+  ⚠️ Não use `z.coerce.boolean()` num filtro de querystring: `Boolean("false")`
+  é `true` em JS, então `?includeArchived=false` devolveria o oposto do pedido.
+  O schema usa `enum(["true","false"])` + `transform` por isso.
+}

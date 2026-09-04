@@ -7,8 +7,10 @@ export const loggerOptions = {
     paths: [
       "req.headers.authorization",
       "req.headers.cookie",
-      "*.message",
       "message",
+      "body.message",
+      "entry.message",
+      "req.body.message",
     ],
     censor: "[redacted]",
   },

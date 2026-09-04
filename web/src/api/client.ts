@@ -11,6 +11,7 @@ export type Habit = {
   id: number;
   name: string;
   categoryId: number;
+  active: boolean;
 };
 
 export type Level = 0 | 1 | 2 | 3 | 4;
@@ -75,6 +76,11 @@ export const api = {
     request<Habit>("/habits", {
       method: "POST",
       body: JSON.stringify(input),
+    }),
+  archiveHabit: (id: number, active: boolean) =>
+    request<Habit>(`/habits/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ active }),
     }),
   commit: (habitId: number, message?: string) =>
     request<CommitResponse>(`/habits/${habitId}/commit`, {

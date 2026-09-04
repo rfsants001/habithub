@@ -41,10 +41,11 @@ export async function commitRoutes(app: FastifyInstance) {
     const yearEntries = findEntriesOfYearByCategory(habit.categoryId, year);
     const weeks = buildGraph(yearEntries, year);
 
-    const totalForDay = yearEntries.filter(
-      (e) => e.date === entry.date,
-    ).length;
-    req.log.debug({ date: entry.date, totalForDay }, "commit.day.counted");
+    const dia = weeks.flat().find((day) => day?.date === entry.date);
+    req.log.debug(
+      { date: entry.date, totalForDay: dia?.total ?? 0 },
+      "commit.day.counted",
+    );
 
     req.log.debug(
       { durationMs: Math.round(performance.now() - startedAt) },

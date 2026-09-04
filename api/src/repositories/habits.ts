@@ -3,18 +3,28 @@ import { db } from "../db/client";
 import { habits, categories, entries } from "../db/schema";
 
 export const habitsRepository = {
-  list: () =>
+  list: ({ includeArchived = false } = {}) =>
     db
       .select({
         id: habits.id,
         name: habits.name,
         categoryId: habits.categoryId,
+        active: habits.active,
         categoryName: categories.name,
         colorHue: categories.colorHue,
       })
       .from(habits)
       .innerJoin(categories, eq(habits.categoryId, categories.id))
+      .where(includeArchived ? undefined : eq(habits.active, true))
       .all(),
+
+  setActive: (id: number, active: boolean) =>
+    db
+      .update(habits)
+      .set({ active })
+      .where(eq(habits.id, id))
+      .returning()
+      .get(),
 
   findById: (id: number) =>
     db.select().from(habits).where(eq(habits.id, id)).get(),

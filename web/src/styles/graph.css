@@ -23,23 +23,17 @@
 }
 
 .graph-day[data-level="0"] {
-  background: hsl(var(--hue) 15% 88%);
+  background: hsl(var(--hue) 10% 18%);
 }
 .graph-day[data-level="1"] {
-  background: hsl(var(--hue) 55% 75%);
+  background: hsl(var(--hue) 45% 26%);
 }
 .graph-day[data-level="2"] {
-  background: hsl(var(--hue) 60% 60%);
+  background: hsl(var(--hue) 55% 36%);
 }
 .graph-day[data-level="3"] {
-  background: hsl(var(--hue) 65% 45%);
+  background: hsl(var(--hue) 62% 48%);
 }
 .graph-day[data-level="4"] {
-  background: hsl(var(--hue) 70% 32%);
-}
-
-@media (prefers-color-scheme: dark) {
-  .graph-day[data-level="0"] {
-    background: hsl(var(--hue) 10% 18%);
-  }
+  background: hsl(var(--hue) 70% 62%);
 }

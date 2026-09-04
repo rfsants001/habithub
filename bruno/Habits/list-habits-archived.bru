@@ -1,0 +1,31 @@
+meta {
+  name: GET habits?includeArchived=true
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/habits?includeArchived=true
+  body: none
+  auth: none
+}
+
+params:query {
+  includeArchived: true
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("traz o hábito arquivado que o GET padrão esconde", function() {
+    const arquivados = res.getBody().filter(function(h) { return h.active === false; });
+    expect(arquivados.length).to.be.at.least(1);
+  });
+}
+
+docs {
+  Prova que arquivar esconde sem apagar. O request anterior arquivou; o
+  `GET /habits` puro não traz mais, este traz.
+}
