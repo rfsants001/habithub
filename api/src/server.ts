@@ -4,6 +4,7 @@ import cors from "@fastify/cors";
 import { loggerOptions } from "./logger";
 import { categoryRoutes } from "./routes/categories";
 import { habitsRoutes } from "./routes/habits";
+import { commitRoutes } from "./routes/commits";
 
 export function createServer() {
   const app = Fastify({ logger: loggerOptions });
@@ -16,6 +17,7 @@ export function createServer() {
 
   app.register(categoryRoutes, { prefix: "/categories" });
   app.register(habitsRoutes, { prefix: "/habits" });
+  app.register(commitRoutes, { prefix: "/habits" });
 
   return app;
 }

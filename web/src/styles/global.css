@@ -129,3 +129,31 @@ button:disabled {
   color: var(--text-muted);
   font-size: 0.875rem;
 }
+
+.tagline {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.category {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: var(--gap);
+}
+
+.habit-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.habit-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+}

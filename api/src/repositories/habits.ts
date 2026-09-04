@@ -5,7 +5,13 @@ import { habits, categories } from "../db/schema";
 export const habitsRepository = {
   list: () =>
     db
-      .select()
+      .select({
+        id: habits.id,
+        name: habits.name,
+        categoryId: habits.categoryId,
+        categoryName: categories.name,
+        colorHue: categories.colorHue,
+      })
       .from(habits)
       .innerJoin(categories, eq(habits.categoryId, categories.id))
       .all(),

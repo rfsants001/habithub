@@ -11,13 +11,18 @@ export type Habit = {
   id: number;
   name: string;
   categoryId: number;
-  active: boolean;
 };
 
 export type Level = 0 | 1 | 2 | 3 | 4;
 export type Day = { date: string; total: number; level: Level };
 export type GraphResponse = {
   category: { id: number; name: string; colorHue: number };
+  year: number;
+  weeks: (Day | null)[][];
+};
+
+export type CommitResponse = {
+  categoryId: number;
   year: number;
   weeks: (Day | null)[][];
 };
@@ -70,5 +75,10 @@ export const api = {
     request<Habit>("/habits", {
       method: "POST",
       body: JSON.stringify(input),
+    }),
+  commit: (habitId: number, message?: string) =>
+    request<CommitResponse>(`/habits/${habitId}/commit`, {
+      method: "POST",
+      body: JSON.stringify(message ? { message } : {}),
     }),
 };
