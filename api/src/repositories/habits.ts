@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../db/client";
-import { habits, categories } from "../db/schema";
+import { habits, categories, entries } from "../db/schema";
 
 export const habitsRepository = {
   list: () =>
@@ -21,6 +21,16 @@ export const habitsRepository = {
 
   create: (input: { name: string; categoryId: number }) =>
     db.insert(habits).values(input).returning().get(),
+
+  hasEntries: (id: number) => {
+    const found = db
+      .select({ id: entries.id })
+      .from(entries)
+      .where(eq(entries.habitId, id))
+      .get();
+
+    return found !== undefined;
+  },
 
   remove: (id: number) => db.delete(habits).where(eq(habits.id, id)).run(),
 };

@@ -1,5 +1,5 @@
 meta {
-  name: DELETE categories/:id -> 204
+  name: DELETE categories/:id -> 409 (tem hábitos)
   type: http
   seq: 2
 }
@@ -11,15 +11,17 @@ delete {
 }
 
 assert {
-  res.status: eq 204
+  res.status: eq 409
 }
 
 docs {
-  Apaga a categoria criada na pasta Categories, fechando o ciclo: rodar a
-  collection inteira deixa o banco como estava.
+  Bloqueado pela D1/FN-003: a categoria ainda tem o hábito criado na pasta
+  Habits, que por sua vez não pôde ser apagado por já ter commits.
 
-  Estes dois DELETEs moram aqui, e não nas pastas dos seus recursos, porque a
-  ordem importa. O Bruno executa pasta por pasta, então um DELETE no fim de
-  Categories rodaria ANTES de Habits — apagaria a categoria e o POST de hábito
-  cairia com erro de foreign key.
+  É o efeito dominó de "não destruir histórico": uma vez que algo foi commitado,
+  a cadeia inteira acima dele fica protegida. Correto pelo modelo atual, e é o
+  argumento mais forte a favor de arquivar em vez de apagar.
+
+  Enquanto não existir arquivamento, esta pasta documenta o bloqueio em vez de
+  limpar — veja a nota em `delete-habit`.
 }
