@@ -44,7 +44,7 @@ export async function categoryRoutes(app: FastifyInstance) {
       category: {
         id: category.id,
         name: category.name,
-        colorHue: category.colorHue,
+        color: category.color,
       },
       year,
       weeks,

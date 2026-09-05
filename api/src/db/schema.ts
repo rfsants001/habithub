@@ -1,11 +1,10 @@
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import { InferSelectModel } from "drizzle-orm";
 
 export const categories = sqliteTable("categories", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
-  colorHue: integer("color_hue").notNull().default(120),
+  color: text("color").notNull().default("#3fb950"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

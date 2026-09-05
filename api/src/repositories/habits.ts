@@ -11,7 +11,7 @@ export const habitsRepository = {
         categoryId: habits.categoryId,
         active: habits.active,
         categoryName: categories.name,
-        colorHue: categories.colorHue,
+        color: categories.color,
       })
       .from(habits)
       .innerJoin(categories, eq(habits.categoryId, categories.id))

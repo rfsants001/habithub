@@ -3,19 +3,19 @@ import { db } from "./db/client";
 import { categories, habits } from "./db/schema";
 
 const REAL_CATEGORIES = [
-  { name: "Saúde", colorHue: 120, habits: ["Academia", "Caminhada"] },
-  { name: "Estudo", colorHue: 210, habits: ["Leitura", "JS/TS"] },
-  { name: "Trabalho", colorHue: 280, habits: ["Deep work"] },
+  { name: "Saúde", color: "#3fb950", habits: ["Academia", "Caminhada"] },
+  { name: "Estudo", color: "#3d99f5", habits: ["Leitura", "JS/TS"] },
+  { name: "Trabalho", color: "#bb67e4", habits: ["Deep work"] },
 ];
 
-function ensureCategory(name: string, colorHue: number) {
+function ensureCategory(name: string, color: string) {
   const existing = db
     .select()
     .from(categories)
     .where(eq(categories.name, name))
     .get();
   if (existing) return existing;
-  return db.insert(categories).values({ name, colorHue }).returning().get();
+  return db.insert(categories).values({ name, color }).returning().get();
 }
 
 function ensureHabit(name: string, categoryId: number) {
@@ -38,11 +38,13 @@ function seed() {
       .from(categories)
       .where(eq(categories.name, item.name))
       .get();
-    const category = ensureCategory(item.name, item.colorHue);
+    const category = ensureCategory(item.name, item.color);
 
     if (categoryBefore) {
       existed++;
-      console.log(`  ↺ categoria "${item.name}" já existia (id ${category.id})`);
+      console.log(
+        `  ↺ categoria "${item.name}" já existia (id ${category.id})`,
+      );
     } else {
       created++;
       console.log(`  ✚ categoria "${item.name}" criada (id ${category.id})`);
@@ -52,7 +54,9 @@ function seed() {
       const habitBefore = db
         .select()
         .from(habits)
-        .where(and(eq(habits.name, habitName), eq(habits.categoryId, category.id)))
+        .where(
+          and(eq(habits.name, habitName), eq(habits.categoryId, category.id)),
+        )
         .get();
       const habit = ensureHabit(habitName, category.id);
 
