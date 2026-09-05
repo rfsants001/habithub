@@ -1,5 +1,5 @@
 meta {
-  name: POST habits com categoria inexistente -> 404 ⏳
+  name: POST habits com categoria inexistente -> 404
   type: http
   seq: 3
 }
@@ -22,12 +22,12 @@ assert {
 }
 
 docs {
-  ⏳ PH-1-004 / PH-1-009.
+  PH-1-004 / PH-1-009.
 
-  Hoje devolve **500** com `SQLITE_CONSTRAINT_FOREIGNKEY`: a FK do banco
-  segura (o que é ótimo), mas o erro vaza cru como se fosse falha do servidor.
+  Já devolveu **500** com `SQLITE_CONSTRAINT_FOREIGNKEY`: a FK do banco segurava
+  (o que é ótimo), mas o erro vazava cru como se fosse falha do servidor. Hoje a
+  rota checa se a categoria existe antes de inserir e traduz pra 404.
 
-  O done-when da PH-1-004 pede 404 — a rota tem que checar se a categoria
-  existe antes de inserir. É um caso em que a trava do banco está certa e a
-  tradução pro HTTP é que falta.
+  O irmão deste caso no caminho da edição é
+  `habito-mover-categoria-inexistente` (PH-1.2-003).
 }

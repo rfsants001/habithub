@@ -2,6 +2,7 @@ import { and, eq, gte, lte } from "drizzle-orm";
 import { db } from "../db/client";
 import { entries, habits } from "../db/schema";
 import { today } from "../db/date";
+import { CreateCommit } from "../schemas/commit";
 
 export function findEntriesOfYearByCategory(categoryId: number, year: number) {
   return db
@@ -18,10 +19,10 @@ export function findEntriesOfYearByCategory(categoryId: number, year: number) {
     .all();
 }
 
-export function createEntry(habitId: number, message?: string) {
+export function createEntry(habitId: number, input: CreateCommit) {
   return db
     .insert(entries)
-    .values({ habitId, date: today(), message })
+    .values({ habitId, date: input.date ?? today(), message: input.message })
     .returning()
     .get();
 }

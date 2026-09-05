@@ -13,7 +13,7 @@ export async function commitRoutes(app: FastifyInstance) {
     const startedAt = performance.now();
 
     const { id } = idParamSchema.parse(req.params);
-    const { message } = createCommitSchema.parse(req.body ?? {});
+    const input = createCommitSchema.parse(req.body ?? {});
 
     const habit = habitsRepository.findById(id);
 
@@ -22,7 +22,7 @@ export async function commitRoutes(app: FastifyInstance) {
       return res.code(404).send({ error: "Hábito não cadastrado" });
     }
 
-    const entry = createEntry(habit.id, message);
+    const entry = createEntry(habit.id, input);
     // (F3) o commit git real entra aqui, ao lado — gitHabits.commit()
 
     req.log.info(
@@ -31,8 +31,8 @@ export async function commitRoutes(app: FastifyInstance) {
         habitId: habit.id,
         categoryId: habit.categoryId,
         date: entry.date,
-        hasMessage: Boolean(message),
-        messageLength: message?.length ?? 0,
+        hasMessage: Boolean(input.message),
+        messageLength: input.message?.length ?? 0,
       },
       "commit.created",
     );
