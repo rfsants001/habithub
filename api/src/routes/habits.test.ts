@@ -1,6 +1,7 @@
 import type { InjectOptions, LightMyRequestResponse } from "fastify";
 import { beforeEach, describe, expect, test } from "vitest";
 import { db } from "../db/client";
+import { formatDate, today } from "../db/date";
 import { categories, entries, habits } from "../db/schema";
 import { createServer } from "../server";
 
@@ -11,6 +12,9 @@ const inject = (opts: InjectOptions): Promise<LightMyRequestResponse> =>
 
 const patch = (id: number, payload: InjectOptions["payload"]) =>
   inject({ method: "PATCH", url: `/habits/${id}`, payload });
+
+const commit = (habitId: number, payload?: InjectOptions["payload"]) =>
+  inject({ method: "POST", url: `/habits/${habitId}/commit`, payload });
 
 const listHabits = async (includeArchived = false) =>
   (
@@ -206,5 +210,151 @@ describe("PATCH /habits/:id", () => {
     const res = await patch(habit.id, { name: "Musculação", id: 4242 });
 
     expect(res.json().id).toBe(habit.id);
+  });
+});
+
+// [PH-1.2-005] Stats por hábito na listagem (FN-012)
+describe("GET /habits — stats por hábito", () => {
+  const hoje = today();
+  const anoAtual = Number(hoje.slice(0, 4));
+  const primeiroDiaDoAno = `${anoAtual}-01-01`;
+  const ontemOuInicioDoAno =
+    hoje === primeiroDiaDoAno
+      ? hoje
+      : formatDate(new Date(new Date().setDate(new Date().getDate() - 1)));
+
+  test("a habit with no commits comes with zeros, not missing fields", async () => {
+    await given();
+
+    const [listed] = await listHabits();
+
+    expect(listed).toMatchObject({
+      totalCommits: 0,
+      lastDate: null,
+      doneToday: false,
+    });
+  });
+
+  test("a habit with no commits still shows up in the listing", async () => {
+    await given();
+
+    expect(await listHabits()).toHaveLength(1);
+  });
+
+  test("counts one commit made today", async () => {
+    const { habit } = await given();
+    await commit(habit.id);
+
+    const [listed] = await listHabits();
+
+    expect(listed).toMatchObject({
+      totalCommits: 1,
+      lastDate: hoje,
+      doneToday: true,
+    });
+  });
+
+  test("totalCommits counts entries, not distinct days", async () => {
+    const { habit } = await given();
+    await commit(habit.id);
+    await commit(habit.id);
+    await commit(habit.id);
+
+    expect((await listHabits())[0].totalCommits).toBe(3);
+  });
+
+  test("the listing does not duplicate a habit that has many commits", async () => {
+    const { habit } = await given();
+    await commit(habit.id);
+    await commit(habit.id);
+
+    expect(await listHabits()).toHaveLength(1);
+  });
+
+  test("lastDate is the most recent date, across days", async () => {
+    const { habit } = await given();
+    await commit(habit.id, { date: primeiroDiaDoAno });
+    await commit(habit.id, { date: ontemOuInicioDoAno });
+    await commit(habit.id);
+
+    expect((await listHabits())[0]).toMatchObject({
+      totalCommits: 3,
+      lastDate: hoje,
+      doneToday: true,
+    });
+  });
+
+  test("a backdated-only habit is not done today", async () => {
+    const { habit } = await given();
+    await commit(habit.id, { date: primeiroDiaDoAno });
+
+    const [listed] = await listHabits();
+
+    expect(listed).toMatchObject({
+      totalCommits: 1,
+      lastDate: primeiroDiaDoAno,
+    });
+    if (primeiroDiaDoAno !== hoje) expect(listed.doneToday).toBe(false);
+  });
+
+  test("one habit's commits do not leak into another's stats", async () => {
+    const { category, habit } = await given();
+    const outro = (
+      await inject({
+        method: "POST",
+        url: "/habits",
+        payload: { name: "Caminhada", categoryId: category.id },
+      })
+    ).json();
+    await commit(habit.id);
+    await commit(habit.id);
+
+    const listed = await listHabits();
+    const academia = listed.find((h: { id: number }) => h.id === habit.id);
+    const caminhada = listed.find((h: { id: number }) => h.id === outro.id);
+
+    expect(academia).toMatchObject({ totalCommits: 2, doneToday: true });
+    expect(caminhada).toMatchObject({
+      totalCommits: 0,
+      lastDate: null,
+      doneToday: false,
+    });
+  });
+
+  test("archived habits carry stats too", async () => {
+    const { habit } = await given();
+    await commit(habit.id);
+    await patch(habit.id, { active: false });
+
+    const [listed] = await listHabits(true);
+
+    expect(listed).toMatchObject({
+      active: false,
+      totalCommits: 1,
+      doneToday: true,
+    });
+  });
+
+  test("the fields from before are still there (color, categoryName)", async () => {
+    const { habit } = await given();
+    await commit(habit.id);
+
+    expect((await listHabits())[0]).toMatchObject({
+      id: habit.id,
+      name: "Academia",
+      categoryName: "Saúde",
+      color: "#3fb950",
+      active: true,
+    });
+  });
+
+  test("no streak or record fields — that is Phase 2 (ADR-003)", async () => {
+    const { habit } = await given();
+    await commit(habit.id);
+
+    const [listed] = await listHabits();
+
+    expect(listed).not.toHaveProperty("streak");
+    expect(listed).not.toHaveProperty("record");
   });
 });

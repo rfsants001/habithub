@@ -43,10 +43,12 @@ banco ao estado em que estava.
 
 ## As requests marcadas com ⏳
 
-Batem em rotas que ainda não existem: são o alvo, escrito antes, e falham de
-propósito até a task chegar. As da F1 (PH-1-007 grafo, PH-1-008 commit,
-PH-1-009 error handler) já foram cumpridas e o marcador saiu — no momento não
-há nenhuma pendente.
+Marcam o que ainda não existe: o **nome da request** quando falta a rota
+inteira, o **nome do teste** quando falta só um campo da resposta. São o alvo,
+escrito antes, e falham de propósito até a task chegar — depois o marcador sai.
+
+As da F1 (PH-1-007 grafo, PH-1-008 commit, PH-1-009 error handler) já foram
+cumpridas. A pendente agora é a PH-1.2-005, nos stats do `GET habits`.
 
 ## Isto não é a sua rede de segurança
 
