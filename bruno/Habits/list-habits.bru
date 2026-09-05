@@ -26,15 +26,32 @@ tests {
     expect(primeiro.name).to.be.a("string");
     expect(primeiro.categoryId).to.be.a("number");
   });
+
+  test("traz a categoria junto: categoryName e color hex", function() {
+    res.getBody().forEach(function(h) {
+      expect(h.categoryName, "categoryName de " + h.name).to.be.a("string");
+      expect(h.color, "color de " + h.name).to.match(/^#[0-9a-fA-F]{6}$/);
+    });
+  });
+
+  test("o campo antigo colorHue não voltou a existir", function() {
+    res.getBody().forEach(function(h) {
+      expect(h, "shape de " + h.name).to.not.have.property("colorHue");
+    });
+  });
 }
 
 docs {
-  ⚠️ O segundo teste falha hoje, e está certo em falhar.
+  O segundo teste nasceu falhando: o `habitsRepository.list()` usava
+  `innerJoin` sem `select()`, e o Drizzle devolvia
+  `{ habits: {...}, categories: {...} }` em vez do objeto plano — enquanto o
+  tipo `Habit` do `web/src/api/client.ts` declarava o formato plano. Front e API
+  discordavam e o TypeScript não tinha como perceber. Some quando o repositório
+  projeta as colunas explicitamente, que é o que ele faz hoje.
 
-  O `habitsRepository.list()` usa `innerJoin` sem `select()`, então o Drizzle
-  devolve `{ habits: {...}, categories: {...} }` em vez do objeto plano. O tipo
-  `Habit` do `web/src/api/client.ts` declara o formato plano — ou seja, front e
-  API discordam e o TypeScript não tem como perceber.
-
-  Some quando o repositório passar a projetar as colunas explicitamente.
+  Os dois últimos são a trava da PH-1.2-001: a listagem entrega a cor da
+  categoria como `color` hex. O alias já voltou pra `colorHue` uma vez num
+  refactor (PH-1.2-003) sem quebrar nada visível — a API passou a devolver um
+  campo chamado *hue* carregando `#3fb950`. Não havia teste nem request
+  cobrindo `GET /habits`, então ninguém viu.
 }

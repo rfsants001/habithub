@@ -1,0 +1,63 @@
+meta {
+  name: PATCH habits/:id editar
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/habits/{{habitId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Musculação"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("o nome novo voltou", function() {
+    expect(res.getBody().name).to.equal("Musculação");
+  });
+
+  test("editar o nome NÃO arquivou o hábito", function() {
+    expect(res.getBody().active).to.equal(true);
+  });
+
+  test("a categoria não mudou sozinha", function() {
+    expect(res.getBody().categoryId).to.be.a("number");
+  });
+}
+
+docs {
+  Depende do `POST habits` (seq 2), que guarda `habitId`.
+
+  A PH-1.2-003 transformou este PATCH — que só trocava `active` — num editor de
+  `name`, `categoryId` e `active`, em qualquer combinação. O schema é
+  `.partial()` com `refine`, igual ao de categoria.
+
+  O teste do `active: true` existe por um motivo concreto: quando o schema
+  deixou de ser `{ active: boolean }` obrigatório, um `.set(input)` descuidado
+  podia sobrescrever `active` com `undefined` numa edição de nome e sumir com o
+  hábito da tela.
+
+  Vale experimentar à mão:
+
+  - `{"categoryId": <outro id>}` → 200, e o `GET /habits` mostra o
+    `categoryName` e o `color` da categoria nova
+  - `{"name": "x", "categoryId": <id>}` → 200, os dois de uma vez
+  - `{"active": false}` → arquiva (é o request seq 3)
+  - `{}` → **400** "Informe ao menos um campo para editar"
+  - id inexistente → **404** "Hábito não encontrado"
+  - `{"categoryId": 999999}` → **404** "Categoria não encontrada", não 500
+    (ver `Erros/habito-mover-categoria-inexistente`)
+
+  O evento de log muda conforme a intenção: `habit.archived` /
+  `habit.unarchived` quando `active` vem no corpo, `habit.updated` no resto.
+  O log registra só os **nomes** dos campos alterados, não os valores.
+}

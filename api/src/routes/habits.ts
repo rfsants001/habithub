@@ -16,15 +16,31 @@ export async function habitsRoutes(app: FastifyInstance) {
 
   app.patch("/:id", async (req, res) => {
     const { id } = idParamSchema.parse(req.params);
-    const { active } = updateHabitSchema.parse(req.body);
+    const input = updateHabitSchema.parse(req.body);
 
-    if (!habitsRepository.findById(id)) {
+    if (
+      input.categoryId !== undefined &&
+      !categoriesRepository.findById(input.categoryId)
+    ) {
+      req.log.warn({ categoryId: input.categoryId }, "category.not-found");
+      return res.code(404).send({ error: "Categoria não encontrada" });
+    }
+
+    const habit = habitsRepository.update(id, input);
+
+    if (!habit) {
       req.log.warn({ habitId: id }, "habit.not-found");
       return res.code(404).send({ error: "Hábito não encontrado" });
     }
 
-    const habit = habitsRepository.setActive(id, active);
-    req.log.info({ habitId: id, active }, "habit.archived");
+    const event =
+      input.active === false
+        ? "habit.archived"
+        : input.active === true
+          ? "habit.unarchived"
+          : "habit.updated";
+
+    req.log.info({ habitId: habit.id, fields: Object.keys(input) }, event);
     return res.send(habit);
   });
 

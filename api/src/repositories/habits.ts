@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../db/client";
 import { habits, categories, entries } from "../db/schema";
+import { UpdateHabit } from "./../schemas/habit";
 
 export const habitsRepository = {
   list: ({ includeArchived = false } = {}) =>
@@ -18,13 +19,8 @@ export const habitsRepository = {
       .where(includeArchived ? undefined : eq(habits.active, true))
       .all(),
 
-  setActive: (id: number, active: boolean) =>
-    db
-      .update(habits)
-      .set({ active })
-      .where(eq(habits.id, id))
-      .returning()
-      .get(),
+  update: (id: number, input: UpdateHabit) =>
+    db.update(habits).set(input).where(eq(habits.id, id)).returning().get(),
 
   findById: (id: number) =>
     db.select().from(habits).where(eq(habits.id, id)).get(),

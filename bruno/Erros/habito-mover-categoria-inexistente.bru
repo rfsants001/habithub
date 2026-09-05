@@ -1,0 +1,46 @@
+meta {
+  name: PATCH habits movendo pra categoria inexistente -> 404
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/habits/{{habitId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "categoryId": 999999
+  }
+}
+
+assert {
+  res.status: eq 404
+}
+
+tests {
+  test("mensagem sobre a CATEGORIA, não sobre o hábito", function() {
+    expect(res.getBody().error).to.equal("Categoria não encontrada");
+  });
+
+  test("não vazou erro de servidor", function() {
+    expect(res.getBody()).to.not.have.property("reqId");
+  });
+}
+
+docs {
+  O irmão do `POST habits com categoria inexistente`, agora no caminho da
+  edição (PH-1.2-003).
+
+  Sem a checagem explícita, a FK do SQLite segura a escrita e o
+  `SQLITE_CONSTRAINT_FOREIGNKEY` sobe como erro não tratado — **500** com
+  `reqId`, que é a assinatura do `setErrorHandler` dizendo "quebrou do nosso
+  lado". Por isso o segundo teste checa a ausência de `reqId`: é o jeito de
+  distinguir um 404 de verdade de um 500 disfarçado.
+
+  A rota checa a categoria **antes** do update, então um PATCH com hábito
+  inexistente *e* categoria inexistente responde sobre a categoria primeiro —
+  mesma precedência do `POST /habits`.
+}
