@@ -1,5 +1,5 @@
 meta {
-  name: GET categories/:id/graph ⏳
+  name: GET categories/:id/graph
   type: http
   seq: 3
 }
@@ -32,18 +32,25 @@ tests {
     });
   });
 
-  test("a categoria vem com o hue pra pintar", function() {
-    expect(res.getBody().category.colorHue).to.be.a("number");
+  test("a categoria vem com a cor pra pintar", function() {
+    expect(res.getBody().category.color).to.match(/^#[0-9a-fA-F]{6}$/);
+  });
+
+  test("o campo antigo colorHue não voltou a existir", function() {
+    expect(res.getBody().category).to.not.have.property("colorHue");
   });
 }
 
 docs {
-  ⏳ PH-1-007 — a rota ainda não existe.
-
   O teste das 53/54 colunas é a D4 se verificando sozinha: 2028 é bissexto e
   começa num sábado, e precisa de 54 colunas pra caber o 31/12. Cravar 53 faz
   o último dia do ano sumir.
 
   O de "toda coluna tem 7" pega o erro de não preencher com `null` as células
   fora do ano — a matriz deixa de ser retangular e o grafo entorta.
+
+  O teste do `colorHue` ausente é uma trava de contrato da PH-1.2-001: esta
+  rota devolvia `colorHue` e passou a devolver `color`. Enquanto o front não
+  migrar (PH-1.2-006), quem ler `category.colorHue` recebe `undefined` e o
+  `--hue` do CSS nasce vazio — o grafo fica cinza sem ninguém dar erro.
 }

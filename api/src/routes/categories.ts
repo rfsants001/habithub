@@ -1,6 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { categoriesRepository } from "../repositories/categories";
-import { createCategorySchema } from "../schemas/category";
+import {
+  createCategorySchema,
+  updateCategorySchema,
+} from "../schemas/category";
 import { idParamSchema } from "../schemas/common";
 import { findEntriesOfYearByCategory } from "../repositories/entries";
 import { buildGraph } from "../domain/graph";
@@ -60,6 +63,23 @@ export async function categoryRoutes(app: FastifyInstance) {
       "category.created",
     );
     return res.code(201).send(category);
+  });
+
+  app.patch("/:id", async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const input = updateCategorySchema.parse(req.body);
+
+    const updatedCategory = categoriesRepository.update(id, input);
+
+    if (!updatedCategory) {
+      req.log.warn({ categoryId: id }, "category.not-found");
+      return res.code(404).send({ error: "Categoria não encontrada" });
+    }
+    req.log.info(
+      { categoryId: updatedCategory.id, name: updatedCategory.name },
+      "category.updated",
+    );
+    return res.code(200).send(updatedCategory);
   });
 
   app.delete("/:id", async (req, res) => {

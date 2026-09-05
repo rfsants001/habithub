@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../db/client";
 import { categories, habits } from "../db/schema";
-import type { CreateCategory } from "../schemas/category";
+import type { CreateCategory, UpdateCategory } from "../schemas/category";
 
 export const categoriesRepository = {
   list: () => db.select().from(categories).all(),
@@ -11,6 +11,14 @@ export const categoriesRepository = {
 
   create: (input: CreateCategory) =>
     db.insert(categories).values(input).returning().get(),
+
+  update: (id: number, input: UpdateCategory) =>
+    db
+      .update(categories)
+      .set(input)
+      .where(eq(categories.id, id))
+      .returning()
+      .get(),
 
   hasHabits: (id: number) => {
     const found = db

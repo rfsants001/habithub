@@ -1,0 +1,58 @@
+meta {
+  name: PATCH categories/:id editar
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/categories/{{categoryId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "color": "#bb67e4"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("a cor nova voltou", function() {
+    expect(res.getBody().color).to.equal("#bb67e4");
+  });
+
+  test("o nome NÃO foi apagado por não ter sido enviado", function() {
+    expect(res.getBody().name).to.equal("Saúde");
+  });
+
+  test("createdAt não foi sobrescrito", function() {
+    expect(res.getBody().createdAt).to.not.be.null;
+  });
+}
+
+docs {
+  Depende do `POST categories` (seq 2), que cria "Saúde" e guarda o id em
+  `categoryId`.
+
+  Este request manda **só a cor** de propósito — é o coração da FN-009. O
+  schema é `.partial()`, então `name` e `color` são opcionais e você edita um
+  sem mexer no outro. Se o nome voltar vazio ou `null` aqui, o schema deixou de
+  ser parcial e virou um PUT disfarçado.
+
+  Vale experimentar à mão:
+
+  - só `{"name": "Bem-estar"}` → 200, a cor continua a de antes
+  - `{}` → **400** "Informe ao menos um campo para editar". Não é frescura: sem
+    esse `.refine()`, o `input` chega vazio e o drizzle monta
+    `UPDATE categories SET WHERE id = ?`, que é SQL inválido — 500 em vez de 400.
+  - `{"color": "#FFF"}` → **400**. O hex é `#rrggbb`, 6 dígitos. O
+    `<input type="color">` do front só emite esse formato, então aceitar
+    shorthand só daria trabalho pro `hexToHue` depois.
+  - id inexistente → **404** "Categoria não encontrada". A rota descobre isso
+    pelo retorno do próprio `update` (que é `undefined` quando nada casa), sem
+    um `findById` antes — uma query, não duas.
+}

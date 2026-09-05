@@ -13,6 +13,13 @@ const inject = (opts: InjectOptions): Promise<LightMyRequestResponse> =>
 const post = (payload: InjectOptions["payload"]) =>
   inject({ method: "POST", url: "/categories", payload });
 
+const patch = (id: number, payload: InjectOptions["payload"]) =>
+  inject({ method: "PATCH", url: `/categories/${id}`, payload });
+
+/** Cria uma categoria pela API e devolve o corpo, pra usar de ponto de partida. */
+const given = async (name = "Saúde", color = "#3fb950") =>
+  (await post({ name, color })).json();
+
 beforeEach(() => {
   db.delete(entries).run();
   db.delete(habits).run();
@@ -99,5 +106,126 @@ describe("GET /categories/:id/graph", () => {
 
     expect(res.statusCode).toBe(404);
     expect(res.json().error).toBe("Categoria não encontrada");
+  });
+});
+
+// [PH-1.2-002] PATCH /categories/:id — editar nome e/ou cor (FN-009)
+describe("PATCH /categories/:id", () => {
+  test("edits name and color at once and returns 200 with the updated category", async () => {
+    const { id } = await given("Saúde", "#3fb950");
+
+    const res = await patch(id, { name: "Bem-estar", color: "#bb67e4" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({
+      id,
+      name: "Bem-estar",
+      color: "#bb67e4",
+    });
+  });
+
+  test("edits only the name and leaves the color untouched", async () => {
+    const { id } = await given("Saúde", "#3fb950");
+
+    const res = await patch(id, { name: "Bem-estar" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ name: "Bem-estar", color: "#3fb950" });
+  });
+
+  test("edits only the color and leaves the name untouched", async () => {
+    const { id } = await given("Saúde", "#3fb950");
+
+    const res = await patch(id, { color: "#3d99f5" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ name: "Saúde", color: "#3d99f5" });
+  });
+
+  test("the edit is persisted, not just echoed back", async () => {
+    const { id } = await given("Saúde", "#3fb950");
+    await patch(id, { name: "Bem-estar", color: "#bb67e4" });
+
+    const listed = (await inject({ url: "/categories" })).json();
+
+    expect(listed).toContainEqual(
+      expect.objectContaining({ id, name: "Bem-estar", color: "#bb67e4" }),
+    );
+  });
+
+  test("the new color reaches the graph response", async () => {
+    const { id } = await given("Saúde", "#3fb950");
+    await patch(id, { color: "#bb67e4" });
+
+    const { category } = (
+      await inject({ url: `/categories/${id}/graph` })
+    ).json();
+
+    expect(category.color).toBe("#bb67e4");
+  });
+
+  test("trims the name before saving", async () => {
+    const { id } = await given();
+
+    expect((await patch(id, { name: "  Bem-estar  " })).json().name).toBe(
+      "Bem-estar",
+    );
+  });
+
+  test("returns 404 for a category that does not exist", async () => {
+    const res = await patch(9999, { name: "Fantasma" });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.json().error).toBe("Categoria não encontrada");
+  });
+
+  test("rejects an invalid hex with 400, same rule as POST", async () => {
+    const { id } = await given();
+
+    const res = await patch(id, { color: "#FFF" });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/hex #rrggbb/);
+  });
+
+  test("rejects an empty name with 400", async () => {
+    const { id } = await given();
+
+    expect((await patch(id, { name: "   " })).statusCode).toBe(400);
+  });
+
+  test("rejects a body with no editable field with 400", async () => {
+    const { id } = await given();
+
+    const res = await patch(id, {});
+
+    expect(res.statusCode).toBe(400);
+  });
+
+  test("ignores unknown fields: id and createdAt are not editable", async () => {
+    const original = await given("Saúde", "#3fb950");
+
+    const res = await patch(original.id, {
+      name: "Bem-estar",
+      id: 4242,
+      createdAt: "1999-01-01 00:00:00",
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({
+      id: original.id,
+      createdAt: original.createdAt,
+    });
+  });
+
+  test("a failed edit changes nothing", async () => {
+    const original = await given("Saúde", "#3fb950");
+
+    await patch(original.id, { name: "Bem-estar", color: "nao-e-hex" });
+
+    const listed = (await inject({ url: "/categories" })).json();
+    expect(listed).toContainEqual(
+      expect.objectContaining({ name: "Saúde", color: "#3fb950" }),
+    );
   });
 });
