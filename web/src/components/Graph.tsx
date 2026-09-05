@@ -1,4 +1,5 @@
 import type { GraphResponse } from "../api/client";
+import { hexToHue } from "../lib/color";
 
 export function Graph({ data }: { data: GraphResponse }) {
   const { category, weeks } = data;
@@ -8,7 +9,7 @@ export function Graph({ data }: { data: GraphResponse }) {
       className="graph"
       style={
         {
-          "--hue": category.colorHue,
+          "--hue": hexToHue(category.color),
           "--weeks": weeks.length,
         } as React.CSSProperties
       }

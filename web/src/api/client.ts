@@ -3,7 +3,7 @@ import { log } from "../lib/log";
 export type Category = {
   id: number;
   name: string;
-  colorHue: number;
+  color: string;
   createdAt: string;
 };
 
@@ -12,12 +12,17 @@ export type Habit = {
   name: string;
   categoryId: number;
   active: boolean;
+  categoryName: string;
+  color: string;
+  totalCommits: number;
+  lastDate: string | null;
+  doneToday: boolean;
 };
 
 export type Level = 0 | 1 | 2 | 3 | 4;
 export type Day = { date: string; total: number; level: Level };
 export type GraphResponse = {
-  category: { id: number; name: string; colorHue: number };
+  category: { id: number; name: string; color: string };
   year: number;
   weeks: (Day | null)[][];
 };
@@ -62,9 +67,14 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   listCategories: () => request<Category[]>("/categories"),
-  createCategory: (input: { name: string; colorHue: number }) =>
+  createCategory: (input: { name: string; color: string }) =>
     request<Category>("/categories", {
       method: "POST",
+      body: JSON.stringify(input),
+    }),
+  updateCategory: (id: number, input: { name?: string; color?: string }) =>
+    request<Category>(`/categories/${id}`, {
+      method: "PATCH",
       body: JSON.stringify(input),
     }),
   deleteCategory: (id: number) =>
@@ -77,14 +87,21 @@ export const api = {
       method: "POST",
       body: JSON.stringify(input),
     }),
-  archiveHabit: (id: number, active: boolean) =>
+  updateHabit: (
+    id: number,
+    input: { name?: string; categoryId?: number; active?: boolean },
+  ) =>
     request<Habit>(`/habits/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ active }),
+      body: JSON.stringify(input),
     }),
-  commit: (habitId: number, message?: string) =>
+  deleteHabit: (id: number) =>
+    request<void>(`/habits/${id}`, {
+      method: "DELETE",
+    }),
+  commit: (habitId: number, input: { date?: string; message?: string } = {}) =>
     request<CommitResponse>(`/habits/${habitId}/commit`, {
       method: "POST",
-      body: JSON.stringify(message ? { message } : {}),
+      body: JSON.stringify(input),
     }),
 };

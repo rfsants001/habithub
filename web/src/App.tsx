@@ -42,7 +42,7 @@ export default function App() {
 
   function archiveHabit(id: number) {
     api
-      .archiveHabit(id, false)
+      .updateHabit(id, { active: false })
       .then(reloadHabits)
       .catch(console.error);
   }
@@ -57,7 +57,7 @@ export default function App() {
         category: {
           id: category.id,
           name: category.name,
-          colorHue: category.colorHue,
+          color: category.color,
         },
         year: response.year,
         weeks: response.weeks,

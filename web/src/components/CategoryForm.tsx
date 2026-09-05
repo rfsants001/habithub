@@ -3,7 +3,7 @@ import { api, ApiError } from "../api/client";
 
 export function CategoryForm({ onCreated }: { onCreated: () => void }) {
   const [name, setName] = useState("");
-  const [colorHue, setColorHue] = useState(120);
+  const [color, setColor] = useState("#3fb950");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -14,7 +14,7 @@ export function CategoryForm({ onCreated }: { onCreated: () => void }) {
     setSaving(true);
 
     try {
-      await api.createCategory({ name, colorHue });
+      await api.createCategory({ name, color });
       setName("");
       onCreated();
     } catch (err) {
@@ -32,19 +32,9 @@ export function CategoryForm({ onCreated }: { onCreated: () => void }) {
         placeholder="Ex: Saúde"
       />
       <input
-        type="range"
-        min={0}
-        max={360}
-        value={colorHue}
-        onChange={(e) => setColorHue(Number(e.target.value))}
-      />
-      <span
-        style={{
-          background: `hsl(${colorHue}, 65%, 45%)`,
-          width: 24,
-          height: 24,
-          display: "inline-block",
-        }}
+        type="color"
+        value={color}
+        onChange={(e) => setColor(e.target.value)}
       />
       <button disabled={saving}>
         {saving ? "Salvando..." : "Criar Categoria"}
