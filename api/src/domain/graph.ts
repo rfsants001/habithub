@@ -2,12 +2,14 @@ import { formatDate } from "../db/date";
 
 export type GraphEntry = {
   date: string;
+  message?: string | null;
 };
 
 export type Day = {
   date: string;
   total: number;
   level: Level;
+  messages: string[];
 };
 
 export type Level = 0 | 1 | 2 | 3 | 4;
@@ -24,10 +26,18 @@ export function levelFor(total: number): Level {
 
 export function buildGraph(entries: GraphEntry[], year: number): GraphMatrix {
   const counts = new Map<string, number>();
+  const messages = new Map<string, string[]>();
   const matrix: GraphMatrix = [];
 
   entries.forEach((entry) => {
     counts.set(entry.date, (counts.get(entry.date) ?? 0) + 1);
+
+    const text = entry.message?.trim();
+    if (text) {
+      const forDay = messages.get(entry.date) ?? [];
+      forDay.push(text);
+      messages.set(entry.date, forDay);
+    }
   });
   const jan1Offset = new Date(year, 0, 1).getDay();
 
@@ -51,7 +61,12 @@ export function buildGraph(entries: GraphEntry[], year: number): GraphMatrix {
 
       const date = formatDate(new Date(year, 0, offset + 1));
       const total = counts.get(date) ?? 0;
-      week.push({ date, total, level: levelFor(total) });
+      week.push({
+        date,
+        total,
+        level: levelFor(total),
+        messages: messages.get(date) ?? [],
+      });
     }
 
     matrix.push(week);

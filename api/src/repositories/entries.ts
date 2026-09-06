@@ -6,7 +6,7 @@ import { CreateCommit } from "../schemas/commit";
 
 export function findEntriesOfYearByCategory(categoryId: number, year: number) {
   return db
-    .select({ date: entries.date })
+    .select({ date: entries.date, message: entries.message })
     .from(entries)
     .innerJoin(habits, eq(entries.habitId, habits.id))
     .where(

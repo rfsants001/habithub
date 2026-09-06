@@ -20,7 +20,12 @@ export type Habit = {
 };
 
 export type Level = 0 | 1 | 2 | 3 | 4;
-export type Day = { date: string; total: number; level: Level };
+export type Day = {
+  date: string;
+  total: number;
+  level: Level;
+  messages: string[];
+};
 export type GraphResponse = {
   category: { id: number; name: string; color: string };
   year: number;

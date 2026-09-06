@@ -98,3 +98,61 @@ describe("buildGraph", () => {
     }
   });
 });
+
+describe("buildGraph — mensagens por dia (FN-013)", () => {
+  const findDay = (matrix: ReturnType<typeof buildGraph>, date: string) =>
+    matrix.flat().find((day) => day?.date === date);
+
+  test("a day with no commit has an empty messages array", () => {
+    expect(findDay(buildGraph([], 2026), "2026-06-15")?.messages).toEqual([]);
+  });
+
+  test("a commit without message does not add an entry to messages", () => {
+    const matrix = buildGraph([{ date: "2026-06-15" }], 2026);
+    expect(findDay(matrix, "2026-06-15")).toMatchObject({
+      total: 1,
+      messages: [],
+    });
+  });
+
+  test("collects the messages of the day, in order", () => {
+    const matrix = buildGraph(
+      [
+        { date: "2026-06-15", message: "manhã" },
+        { date: "2026-06-15", message: "noite" },
+      ],
+      2026,
+    );
+    expect(findDay(matrix, "2026-06-15")).toMatchObject({
+      total: 2,
+      messages: ["manhã", "noite"],
+    });
+  });
+
+  test("blank and whitespace-only messages are ignored, but still count", () => {
+    const matrix = buildGraph(
+      [
+        { date: "2026-06-15", message: "   " },
+        { date: "2026-06-15", message: null },
+        { date: "2026-06-15", message: "valeu" },
+      ],
+      2026,
+    );
+    expect(findDay(matrix, "2026-06-15")).toMatchObject({
+      total: 3,
+      messages: ["valeu"],
+    });
+  });
+
+  test("messages do not leak between days", () => {
+    const matrix = buildGraph(
+      [
+        { date: "2026-06-15", message: "dia 15" },
+        { date: "2026-06-16", message: "dia 16" },
+      ],
+      2026,
+    );
+    expect(findDay(matrix, "2026-06-15")?.messages).toEqual(["dia 15"]);
+    expect(findDay(matrix, "2026-06-16")?.messages).toEqual(["dia 16"]);
+  });
+});
