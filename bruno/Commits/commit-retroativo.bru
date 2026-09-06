@@ -1,0 +1,65 @@
+meta {
+  name: POST habits/:id/commit retroativo
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/habits/{{habitId}}/commit
+  body: json
+  auth: none
+}
+
+script:pre-request {
+  // 1º de janeiro do ano corrente: sempre passado (ou hoje) e sempre dentro
+  // do ano do grafo, então este request não quebra na virada do ano.
+  bru.setVar("dataRetroativa", new Date().getFullYear() + "-01-01");
+}
+
+body:json {
+  {
+    "date": "{{dataRetroativa}}",
+    "message": "esqueci de marcar no dia"
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+tests {
+  test("pinta o dia PEDIDO, não hoje", function() {
+    const alvo = bru.getVar("dataRetroativa");
+    const dia = res.getBody().weeks.flat().find(function(d) {
+      return d && d.date === alvo;
+    });
+    expect(dia, "o dia " + alvo + " na matriz").to.not.be.undefined;
+    expect(dia.total).to.be.at.least(1);
+  });
+
+  test("devolve a matriz repintada, igual ao commit de hoje", function() {
+    const b = res.getBody();
+    expect(b.weeks).to.be.an("array");
+    expect(b.categoryId).to.be.a("number");
+  });
+}
+
+docs {
+  PH-1.2-004 — o backdating da FN-011: "esqueci de marcar ontem".
+
+  O `date` é opcional. Sem ele, o servidor usa `today()` e o comportamento é
+  idêntico ao da F1 (seq 1 e 2). Com ele, o servidor valida:
+
+  - formato `YYYY-MM-DD`
+  - **não-futuro**
+  - **dentro do ano do grafo** (o grafo é do ano corrente)
+
+  Qualquer uma dessas falhando é **400** com mensagem em português, não 500.
+
+  Continua **sem dedup** (FN-011): dispare este request 3 vezes e veja o
+  `total` do 1º de janeiro subir 1 → 2 → 3, igual ao commit de hoje. Backdating
+  não introduz `UNIQUE (habit_id, date)`.
+
+  ⚠️ O backdating aqui é só no nível de `entries`. Commit git de verdade com
+  data retroativa é Fase 3 — não confunda os dois.
+}

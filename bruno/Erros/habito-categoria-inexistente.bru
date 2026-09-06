@@ -1,0 +1,33 @@
+meta {
+  name: POST habits com categoria inexistente -> 404
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/habits
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Órfão",
+    "categoryId": 999999
+  }
+}
+
+assert {
+  res.status: eq 404
+}
+
+docs {
+  PH-1-004 / PH-1-009.
+
+  Já devolveu **500** com `SQLITE_CONSTRAINT_FOREIGNKEY`: a FK do banco segurava
+  (o que é ótimo), mas o erro vazava cru como se fosse falha do servidor. Hoje a
+  rota checa se a categoria existe antes de inserir e traduz pra 404.
+
+  O irmão deste caso no caminho da edição é
+  `habito-mover-categoria-inexistente` (PH-1.2-003).
+}

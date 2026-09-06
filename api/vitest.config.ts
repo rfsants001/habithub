@@ -5,6 +5,13 @@ export default defineConfig({
     // testes ficam ao lado do código (src/domain/grafo.test.ts)
     include: ['src/**/*.{test,spec}.ts'],
 
+    // testes de rota falam com um SQLite em memória; o habithub.db nunca é tocado
+    env: {
+      DB_FILE: ':memory:',
+      LOG_LEVEL: 'silent',
+    },
+    setupFiles: ['./src/test/setup.ts'],
+
     coverage: {
       provider: 'v8',
       // a TUI (scripts/) lê os dois JSON: 'json-summary' → tabela de %,
@@ -14,6 +21,7 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       exclude: [
         'src/**/*.{test,spec}.ts',
+        'src/test/**', // infra de teste, não é código de produção
         'src/db/migrations/**',
         'src/seed*.ts', // scripts de uso manual, não entram na conta
       ],

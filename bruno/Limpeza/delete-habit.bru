@@ -1,0 +1,38 @@
+meta {
+  name: DELETE habits/:id -> 409 (tem commits)
+  type: http
+  seq: 1
+}
+
+delete {
+  url: {{baseUrl}}/habits/{{habitId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 409
+}
+
+tests {
+  test("explica que o histórico não é apagado", function() {
+    expect(res.getBody().error).to.be.a("string");
+  });
+}
+
+docs {
+  A pasta Commits acabou de gravar duas entries neste hábito, então apagá-lo é
+  **bloqueado** — mesma regra da D1 para categorias: histórico não se destrói
+  em silêncio.
+
+  Antes isto devolvia **500**: a foreign key de `entries` barrava o DELETE e o
+  erro vazava como falha do servidor. Virou 409 na PH-1-009.
+
+  ⚠️ Consequência: a collection **não se limpa mais sozinha**. Cada execução
+  completa deixa para trás uma categoria, um hábito e duas entries. O caminho
+  para resolver é arquivar em vez de apagar (o campo `ativo` do diagrama ER,
+  que nunca virou coluna) — decisão ainda em aberto.
+
+  Para limpar na mão enquanto isso:
+  sqlite3 api/habithub.db "DELETE FROM entries WHERE habit_id > 1; DELETE FROM habits WHERE id > 1; DELETE FROM categories WHERE id > 1;"
+}

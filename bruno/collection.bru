@@ -1,0 +1,27 @@
+headers {
+  Accept: application/json
+}
+
+tests {
+  test("resposta em menos de 1000ms", function() {
+    expect(res.getResponseTime()).to.be.below(1000);
+  });
+}
+
+docs {
+  # HabitHub API
+
+  Collection de exploração da API. Escolha o environment **Local** (ou **LAN**,
+  para testar pelo celular) antes de disparar qualquer request.
+
+  A ordem das pastas é a ordem de execução se você rodar a collection inteira:
+  Categories cria e guarda `categoryId`, Habits usa ele e guarda `habitId`,
+  Commits usa o `habitId`, e Erros fecha com os casos de falha.
+
+  O ⏳ marca o que ainda não existe: no nome da request quando a rota inteira
+  falta, no nome do teste quando só um campo da resposta falta. São o alvo,
+  escrito antes, e falham de propósito até a task chegar.
+
+  Isto aqui é ferramenta de investigação, não rede de segurança: quem quebra o
+  PR é o Vitest.
+}

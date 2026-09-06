@@ -1,32 +1,37 @@
-# React + TypeScript + Vite
+# habithub-web
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+SPA do HabitHub — Vite + React 19 + TypeScript. A API fica em [`../api`](../api).
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm run dev        # http://localhost:5173 (e no IP da LAN, pelo --host)
+npm run typecheck
+npm run lint
+npm run build
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+> Prefira a TUI da raiz — `./scripts/habithub` sobe API e web lado a lado.
+
+## Estrutura
+
+```
+src/
+├── api/client.ts     # ÚNICA fronteira de rede — nenhum fetch( fora daqui
+├── components/       # componentes de tela
+├── styles/global.css # tokens (cores, escala do grafo) e primitivos
+├── App.tsx           # shell
+└── main.tsx          # entrada
+```
+
+## Como as chamadas chegam na API
+
+O front sempre usa caminho relativo (`/api/categories`). O proxy do
+[`vite.config.ts`](vite.config.ts) encaminha pra `http://localhost:3000` e tira o prefixo `/api`.
+
+Por isso abrir pelo IP da LAN no celular funciona sem trocar nada — se a URL fosse
+`localhost:3000` hardcoded, o celular tentaria conectar em si mesmo.
+
+## Convenções
+
+- Código em inglês, texto de tela em português (ADR-010 / NF-005).
+- `console.log` solto não passa no review: ou é `log.debug` (some no build), ou não existe.
+- Erro de API vira **duas** coisas: log no console e estado visível no form (FN-014).

@@ -1,0 +1,52 @@
+meta {
+  name: POST categories body inválido -> 400
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/categories
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "",
+    "color": "#FFF"
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+tests {
+  test("mensagem em português, pronta pro form (FN-014)", function() {
+    expect(res.getBody().error).to.be.a("string");
+  });
+
+  test("fields diz qual campo errou", function() {
+    expect(res.getBody().fields).to.be.an("array");
+  });
+
+  test("lista os DOIS erros, não só o primeiro", function() {
+    const campos = res.getBody().fields.map(function(f) { return f.field; });
+    expect(campos).to.include("name");
+    expect(campos).to.include("color");
+  });
+}
+
+docs {
+  Dois erros de uma vez no body: nome vazio e cor em shorthand. Serve pra
+  conferir que `fields` lista os dois, não só o primeiro — o `error` de topo é
+  só o `issues[0]`, mas o form precisa marcar os dois campos de vermelho.
+
+  O `#FFF` é inválido de propósito. Ele *é* um hex CSS legítimo, mas a
+  PH-1.2-001 fechou o contrato em `#rrggbb` de 6 dígitos: o
+  `<input type="color">` do front só emite esse formato, e aceitar shorthand
+  ou alpha (`#rrggbbaa`) só empurraria trabalho pro `hexToHue`.
+
+  Antes do `setErrorHandler` (PH-1-009) isto devolvia **500** com o JSON cru do
+  ZodError no campo `message`.
+}

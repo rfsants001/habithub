@@ -303,6 +303,9 @@ habithub/
 │   │   ├── api/client.ts    # fetch tipado
 │   │   └── styles/
 │   └── package.json
+├── bruno/                   # Collection Bruno — exploração da API (.bru versionado)
+│   ├── environments/        # Local · LAN (celular)
+│   └── Health/ Categories/ Habits/ Commits/ Erros/ Limpeza/
 ├── .gitignore
 └── README.md
 ```

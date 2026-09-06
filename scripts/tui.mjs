@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url'
 import process from 'node:process'
 
 import { aguardarTecla, C, cabecalho, menu, pintar, preencher, tela } from './lib/ui.mjs'
-import { capturar, executar, Servico } from './lib/proc.mjs'
+import { capturar, executar, pararTodosJa, Servico } from './lib/proc.mjs'
 import { abrirPainel } from './lib/painel.mjs'
 import { menuTestes } from './lib/testes.mjs'
 
@@ -303,6 +303,10 @@ async function principal() {
 let modoGrafico = false
 
 function restaurar() {
+  // Antes do terminal: os serviços são detached, então nenhum sinal que derruba
+  // a TUI chega neles. Sem isto, um Ctrl+C fora do painel (ou um crash) deixa
+  // tsx e vite vivos segurando :3000 e :5173, e o próximo start falha.
+  pararTodosJa()
   if (!modoGrafico) return // --check não entrou em alt screen: nada a desfazer
   tela.mostrarCursor()
   tela.sairAlt()

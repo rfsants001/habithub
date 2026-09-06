@@ -1,0 +1,52 @@
+meta {
+  name: POST categories
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/categories
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Saúde",
+    "color": "#3fb950"
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setVar("categoryId", res.getBody().id);
+  }
+}
+
+tests {
+  test("devolve a categoria criada com id", function() {
+    expect(res.getBody().id).to.be.a("number");
+  });
+
+  test("o color enviado foi persistido", function() {
+    expect(res.getBody().color).to.equal("#3fb950");
+  });
+}
+
+docs {
+  Guarda o `id` na variável `categoryId`, usada pelo grafo, pelo PATCH, pelo
+  POST de hábito e pelo DELETE mais abaixo.
+
+  O teste do `color` não é decoração: mande `#3d99f5` no body e confira que
+  volta `#3d99f5`. Se voltar `#3fb950` (o default da coluna), o valor está
+  sendo descartado no caminho de novo — foi exatamente o que acontecia quando
+  o campo se chamava `colorHue` e a coluna `color_hue` não existia na tabela.
+
+  A cor é hex `#rrggbb` desde a PH-1.2-001 (antes era um inteiro de matiz
+  0–360). O grafo continua desenhando por hue: o front extrai o H do hex com
+  `hexToHue` e alimenta o `--hue` do `graph.css`, que ficou intacto.
+}

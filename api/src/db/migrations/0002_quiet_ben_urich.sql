@@ -1,0 +1,1 @@
+ALTER TABLE `habits` ADD `active` integer DEFAULT true NOT NULL;

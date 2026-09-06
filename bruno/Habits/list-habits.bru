@@ -1,0 +1,85 @@
+meta {
+  name: GET habits
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/habits
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("devolve uma lista", function() {
+    expect(res.getBody()).to.be.an("array");
+  });
+
+  test("o hábito vem plano, não aninhado no join", function() {
+    const primeiro = res.getBody()[0];
+    if (!primeiro) return;
+    expect(primeiro, "shape do item").to.not.have.property("habits");
+    expect(primeiro.name).to.be.a("string");
+    expect(primeiro.categoryId).to.be.a("number");
+  });
+
+  test("traz a categoria junto: categoryName e color hex", function() {
+    res.getBody().forEach(function(h) {
+      expect(h.categoryName, "categoryName de " + h.name).to.be.a("string");
+      expect(h.color, "color de " + h.name).to.match(/^#[0-9a-fA-F]{6}$/);
+    });
+  });
+
+  test("o campo antigo colorHue não voltou a existir", function() {
+    res.getBody().forEach(function(h) {
+      expect(h, "shape de " + h.name).to.not.have.property("colorHue");
+    });
+  });
+
+  test("⏳ PH-1.2-005 — cada hábito traz totalCommits, lastDate e doneToday", function() {
+    res.getBody().forEach(function(h) {
+      expect(h.totalCommits, "totalCommits de " + h.name).to.be.a("number");
+      expect(h.doneToday, "doneToday de " + h.name).to.be.a("boolean");
+      // lastDate é null quando o hábito nunca foi commitado
+      if (h.totalCommits > 0) {
+        expect(h.lastDate, "lastDate de " + h.name).to.match(/^\d{4}-\d{2}-\d{2}$/);
+      } else {
+        expect(h.lastDate, "lastDate de " + h.name).to.equal(null);
+      }
+    });
+  });
+
+  test("⏳ PH-1.2-005 — sem streak nem recorde (é Fase 2)", function() {
+    res.getBody().forEach(function(h) {
+      expect(h).to.not.have.property("streak");
+      expect(h).to.not.have.property("record");
+    });
+  });
+}
+
+docs {
+  O segundo teste nasceu falhando: o `habitsRepository.list()` usava
+  `innerJoin` sem `select()`, e o Drizzle devolvia
+  `{ habits: {...}, categories: {...} }` em vez do objeto plano — enquanto o
+  tipo `Habit` do `web/src/api/client.ts` declarava o formato plano. Front e API
+  discordavam e o TypeScript não tinha como perceber. Some quando o repositório
+  projeta as colunas explicitamente, que é o que ele faz hoje.
+
+  Os dois testes marcados com ⏳ são o alvo da **PH-1.2-005** e falham até ela:
+  a listagem passa a trazer `totalCommits` (contagem de entries), `lastDate`
+  (a maior data) e `doneToday` (bool). Um hábito sem nenhum commit tem que
+  aparecer com `0 / null / false` — se ele **sumir** da lista, o repositório
+  usou `innerJoin` em `entries` onde precisava de `leftJoin`.
+
+  Nada de streak nem recorde aqui: é agregação pura, ADR-003, Fase 2.
+
+  Os dois anteriores são a trava da PH-1.2-001: a listagem entrega a cor da
+  categoria como `color` hex. O alias já voltou pra `colorHue` uma vez num
+  refactor (PH-1.2-003) sem quebrar nada visível — a API passou a devolver um
+  campo chamado *hue* carregando `#3fb950`. Não havia teste nem request
+  cobrindo `GET /habits`, então ninguém viu.
+}

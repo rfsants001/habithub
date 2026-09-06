@@ -1,0 +1,63 @@
+meta {
+  name: POST commit com data futura -> 400
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/habits/{{habitId}}/commit
+  body: json
+  auth: none
+}
+
+script:pre-request {
+  const amanha = new Date();
+  amanha.setDate(amanha.getDate() + 1);
+  const pad = function(n) { return String(n).padStart(2, "0"); };
+  bru.setVar(
+    "dataFutura",
+    amanha.getFullYear() + "-" + pad(amanha.getMonth() + 1) + "-" + pad(amanha.getDate())
+  );
+}
+
+body:json {
+  {
+    "date": "{{dataFutura}}"
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+tests {
+  test("mensagem em português, pronta pro form", function() {
+    expect(res.getBody().error).to.be.a("string");
+  });
+
+  test("não vazou erro de servidor", function() {
+    expect(res.getBody()).to.not.have.property("reqId");
+  });
+}
+
+docs {
+  PH-1.2-004. O date-picker do front deve travar datas futuras, mas a regra
+  mora no servidor — cliente não é validação.
+
+  Por que futuro é proibido: o grafo é um registro do que **foi feito**. Deixar
+  marcar amanhã transforma o hábito em agenda e o quadradinho passa a mentir.
+
+  Vale testar à mão, todos **400**:
+
+  - `{"date": "<31/12 do ano passado>"}` → fora do ano do grafo. A matriz só
+    tem os dias do ano corrente, então a entry existiria no banco e **nunca
+    apareceria** — some sem erro nenhum.
+  - `{"date": "05/09/2026"}` → formato errado (barras)
+  - `{"date": "<ano>-02-30"}` → passa no regex `\d{4}-\d{2}-\d{2}` mas não é um
+    dia real. Se isso for aceito, a entry entra no banco e o `buildGraph` nunca
+    acha o dia — mesmo sumiço silencioso do caso acima.
+
+  O teste de `reqId` ausente distingue um 400 de verdade de um 500 disfarçado:
+  `reqId` só aparece no corpo quando o `setErrorHandler` cai no ramo de erro
+  não tratado.
+}

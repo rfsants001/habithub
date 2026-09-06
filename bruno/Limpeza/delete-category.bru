@@ -1,0 +1,27 @@
+meta {
+  name: DELETE categories/:id -> 409 (tem hábitos)
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{baseUrl}}/categories/{{categoryId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 409
+}
+
+docs {
+  Bloqueado pela D1/FN-003: a categoria ainda tem o hábito criado na pasta
+  Habits, que por sua vez não pôde ser apagado por já ter commits.
+
+  É o efeito dominó de "não destruir histórico": uma vez que algo foi commitado,
+  a cadeia inteira acima dele fica protegida. Correto pelo modelo atual, e é o
+  argumento mais forte a favor de arquivar em vez de apagar.
+
+  Enquanto não existir arquivamento, esta pasta documenta o bloqueio em vez de
+  limpar — veja a nota em `delete-habit`.
+}

@@ -1,0 +1,51 @@
+meta {
+  name: GET categories
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/categories
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("devolve uma lista", function() {
+    expect(res.getBody()).to.be.an("array");
+  });
+
+  test("toda categoria tem color hex #rrggbb", function() {
+    res.getBody().forEach(function(c) {
+      expect(c.color, "color de " + c.name).to.be.a("string");
+      expect(c.color).to.match(/^#[0-9a-fA-F]{6}$/);
+    });
+  });
+
+  test("createdAt não volta null", function() {
+    res.getBody().forEach(function(c) {
+      expect(c.createdAt, "createdAt de " + c.name).to.not.be.null;
+    });
+  });
+}
+
+docs {
+  Os dois últimos testes existem por causa de bugs reais que já aconteceram:
+
+  - a cor era validada pelo Zod e descartada em silêncio pelo Drizzle, porque
+    a coluna não existia na tabela. Valia pro antigo `colorHue`/`color_hue` e
+    vale igual pro `color` de hoje — por isso o teste checa o formato, não só
+    a presença.
+  - `createdAt` voltava `null`: a coluna era `integer(mode:'timestamp')` com
+    default `CURRENT_TIMESTAMP`, que no SQLite gera uma string.
+
+  Os dois foram corrigidos por migration. Estes testes são a trava.
+
+  O regex de 6 dígitos também trava a decisão da PH-1.2-001: nada de `#FFF`
+  nem de alpha `#rrggbbaa`. Se um `#FFF` passar por aqui, alguém afrouxou o
+  Zod e o `hexToHue` do front vai ter que lidar com shorthand.
+}

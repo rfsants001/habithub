@@ -5,6 +5,26 @@ import { spawn } from 'node:child_process'
 import process from 'node:process'
 
 const LIMITE_BUFFER = 800 // linhas guardadas por processo (ring buffer)
+const PRAZO_SIGKILL = 2000 // quanto esperamos o SIGTERM antes de escalar
+
+// Todo serviço vivo. Os filhos são `detached` (grupo próprio), então nenhum
+// sinal que chega na TUI chega neles: quem sai tem que matar explicitamente,
+// senão sobra órfão segurando :3000/:5173.
+const vivos = new Set()
+
+/**
+ * Best-effort SÍNCRONO — para os handlers de saída da TUI (`exit`, SIGINT,
+ * SIGTERM, crash), onde não dá pra aguardar promise.
+ */
+export function pararTodosJa() {
+  for (const s of vivos) {
+    const pid = s.filho?.pid
+    if (!pid) continue
+    try { process.kill(-pid, 'SIGTERM') }
+    catch { try { process.kill(pid, 'SIGTERM') } catch { /* já morreu */ } }
+  }
+  vivos.clear()
+}
 
 /**
  * Processo de longa duração, com log capturado em memória.
@@ -20,6 +40,7 @@ export class Servico {
     this.parcial = ''
     this.ouvintes = new Set()
     this.iniciadoEm = null
+    this.pedidoDeParada = false // distingue "eu mandei parar" de "caiu sozinho"
   }
 
   aoMudar(fn) { this.ouvintes.add(fn); return () => this.ouvintes.delete(fn) }
@@ -43,8 +64,9 @@ export class Servico {
     this.estado = 'rodando'
     this.codigoSaida = null
     this.iniciadoEm = Date.now()
+    this.pedidoDeParada = false
 
-    this.filho = spawn(this.comando, this.args, {
+    const filho = spawn(this.comando, this.args, {
       cwd: this.cwd,
       // detached: o dev server gera netos (esbuild, workers). Sem grupo próprio,
       // matar o pai deixa órfão segurando a porta — e o próximo start falha.
@@ -52,51 +74,80 @@ export class Servico {
       stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env, FORCE_COLOR: '1' }, // mantém cor mesmo saindo por pipe
     })
+    this.filho = filho
+    vivos.add(this)
 
-    this.filho.stdout.setEncoding('utf8')
-    this.filho.stderr.setEncoding('utf8')
-    this.filho.stdout.on('data', (d) => this.#anotar(d))
-    this.filho.stderr.on('data', (d) => this.#anotar(d, 'erro'))
+    filho.stdout.setEncoding('utf8')
+    filho.stderr.setEncoding('utf8')
+    filho.stdout.on('data', (d) => this.#anotar(d))
+    filho.stderr.on('data', (d) => this.#anotar(d, 'erro'))
 
-    this.filho.on('exit', (codigo, sinal) => {
-      clearTimeout(this.timerKill)
+    // `filho` (local) e não `this.filho`: num restart o processo velho ainda
+    // emite 'exit' depois do novo ter subido, e sem esta guarda ele apagaria
+    // o estado do novo — a TUI mostraria "saiu" com o servidor no ar.
+    filho.on('exit', (codigo, sinal) => {
+      if (this.filho !== filho) return
       this.codigoSaida = codigo
-      this.estado = codigo === 0 || sinal ? 'saiu' : 'falhou'
-      this.#anotar(`\n[${this.nome}] processo encerrado (código ${codigo ?? sinal})\n`, 'meta')
+      // 'saiu'/'falhou' = morreu sozinho (é o que você quer ver no painel).
+      // tsx e vite tratam SIGTERM e saem com 0, daí a intenção valer mais que o código.
+      this.estado = this.pedidoDeParada || sinal ? 'parado' : codigo === 0 ? 'saiu' : 'falhou'
       this.filho = null
+      vivos.delete(this)
+      this.#anotar(`\n[${this.nome}] processo encerrado (código ${codigo ?? sinal})\n`, 'meta')
     })
 
-    this.filho.on('error', (err) => {
+    filho.on('error', (err) => {
+      if (this.filho !== filho) return
       this.estado = 'falhou'
-      this.#anotar(`[${this.nome}] falha ao executar: ${err.message}\n`, 'erro')
       this.filho = null
+      vivos.delete(this)
+      this.#anotar(`[${this.nome}] falha ao executar: ${err.message}\n`, 'erro')
     })
 
     this.#notificar()
   }
 
+  /** Resolve só quando o processo morreu de fato. Sempre aguarde antes de subir de novo. */
   parar() {
-    if (!this.filho) return
-    const pid = this.filho.pid
+    const filho = this.filho
+    if (!filho) return Promise.resolve()
+    const pid = filho.pid
+    this.pedidoDeParada = true
 
     const sinalizar = (sinal) => {
       try { process.kill(-pid, sinal) }              // '-pid' = o grupo inteiro (pai + netos)
       catch { try { process.kill(pid, sinal) } catch { /* já morreu */ } }
     }
 
-    sinalizar('SIGTERM')
+    return new Promise((resolve) => {
+      const pronto = () => { clearTimeout(kill); clearTimeout(desistir); resolve() }
+      filho.once('exit', pronto)
 
-    // Escalonamento: dev server que ignora SIGTERM (ou trava fechando socket)
-    // deixaria a porta ocupada e o próximo start falharia. 2s e vai SIGKILL.
-    this.timerKill = setTimeout(() => {
-      if (this.filho?.pid === pid) sinalizar('SIGKILL')
-    }, 2000)
-    this.timerKill.unref?.()
+      sinalizar('SIGTERM')
+
+      // Escalonamento: dev server que ignora SIGTERM (ou trava fechando socket)
+      // deixaria a porta ocupada e o próximo start falharia. 2s e vai SIGKILL.
+      const kill = setTimeout(() => sinalizar('SIGKILL'), PRAZO_SIGKILL)
+      // Nem o SIGKILL pode travar a TUI pra sempre — avisa e segue. Como o
+      // 'exit' nunca veio, é aqui que largamos o filho: sem isso o estado fica
+      // 'rodando' pra sempre e o próximo iniciar() cai no guard e não sobe nada.
+      const desistir = setTimeout(() => {
+        if (this.filho === filho) {
+          this.estado = 'falhou'
+          this.filho = null
+          vivos.delete(this)
+        }
+        this.#anotar(`\n[${this.nome}] não morreu nem com SIGKILL — confira a porta ${this.porta ?? '?'}\n`, 'erro')
+        pronto()
+      }, PRAZO_SIGKILL + 1000)
+      kill.unref?.()
+      desistir.unref?.()
+    })
   }
 
-  reiniciar() {
-    this.parar()
-    setTimeout(() => this.iniciar(), 350)
+  async reiniciar() {
+    await this.parar()   // sem o await, o iniciar() abaixo cai no guard de 'rodando' e não sobe nada
+    this.iniciar()
   }
 
   limparLog() { this.linhas = []; this.#notificar() }

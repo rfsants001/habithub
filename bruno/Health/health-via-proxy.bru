@@ -1,0 +1,28 @@
+meta {
+  name: GET health (pelo proxy do Vite)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{proxyUrl}}/health
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.status: eq ok
+}
+
+docs {
+  Mesma rota, mas passando por :5173 em vez de :3000.
+
+  É o caminho que o front usa de verdade: o browser chama `/api/health`, o Vite
+  tira o prefixo e repassa pro Fastify. Se esta passa e a anterior falha, a API
+  está fora; se esta falha e a anterior passa, o problema é o proxy do
+  `vite.config.ts` (ou o Vite não está rodando).
+
+  É também o teste que importa no environment LAN: é assim que o celular
+  enxerga a API.
+}

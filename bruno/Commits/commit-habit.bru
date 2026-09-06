@@ -1,0 +1,60 @@
+meta {
+  name: POST habits/:id/commit
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/habits/{{habitId}}/commit
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "message": "leg day"
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+tests {
+  test("devolve a matriz repintada, não { ok: true }", function() {
+    const b = res.getBody();
+    expect(b.weeks, "weeks").to.be.an("array");
+    expect(b.categoryId).to.be.a("number");
+    expect(b.year).to.be.a("number");
+  });
+
+  test("o dia de hoje aparece com total >= 1", function() {
+    // Montado na mão, sem Intl: o sandbox do Bruno não tem ICU completo, e
+    // toLocaleDateString("sv-SE") cai no formato americano (09/03/2026).
+    const agora = new Date();
+    const pad = function(n) { return String(n).padStart(2, "0"); };
+    const hoje =
+      agora.getFullYear() + "-" + pad(agora.getMonth() + 1) + "-" + pad(agora.getDate());
+
+    const dia = res.getBody().weeks.flat().find(function(d) {
+      return d && d.date === hoje;
+    });
+    expect(dia, "o dia " + hoje + " na matriz").to.not.be.undefined;
+    expect(dia.total).to.be.at.least(1);
+  });
+}
+
+docs {
+  PH-1-008 — o AHÁ do EP01.
+
+  O contrato é "mutação devolve o novo estado": uma requisição por clique, e a
+  resposta já traz a matriz repintada. Se voltar `{ ok: true }` e o front
+  precisar de um GET depois, a task não fechou.
+
+  Dispare **3 vezes seguidas** e veja o `total` do dia subir 1 → 2 → 3. É a
+  FN-007: vários commits no mesmo dia somam e escurecem o quadradinho. Se
+  travar em 1, alguém pôs um `UNIQUE (habit_id, date)` no caminho.
+
+  O `toLocaleDateString("sv-SE")` do teste é o mesmo do `formatDate` da API —
+  dia local, não UTC. Commit às 23h50 tem que pintar hoje.
+}

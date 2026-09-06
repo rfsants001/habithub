@@ -28,6 +28,6 @@ historico-habitos/
 # SO / editor
 .DS_Store
 .idea/
-.vscode/
+.vscode/*
 .specs
 .claude
