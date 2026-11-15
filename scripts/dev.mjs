@@ -127,9 +127,11 @@ try {
     throw new Error('Use portas diferentes para PORT e WEB_PORT.')
   }
   await Promise.all(selected.map(checkPort))
-  startup.signal.throwIfAborted()
-  for (const service of selected) launch(service)
-  await Promise.all(selected.map(service => waitFor(`${service.address}${service.readyPath}`, service.name)))
+  for (const service of selected) {
+    startup.signal.throwIfAborted()
+    launch(service)
+    await waitFor(`${service.address}${service.readyPath}`, service.name)
+  }
   if (!target) await waitFor(`${selected[1].address}/api/health`, 'Proxy Web → API')
   startup.signal.throwIfAborted()
   const urls = selected.map(service => `${service.name} em ${service.address}`).join(' · ')
