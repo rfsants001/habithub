@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { today } from "../db/date";
 
-function isRealDay(value: string) {
+export function isRealDay(value: string) {
   const [year, month, day] = value.split("-").map(Number);
   const date = new Date(year, month - 1, day);
 
@@ -12,7 +12,7 @@ function isRealDay(value: string) {
   );
 }
 
-const commitDate = z
+export const commitDate = z
   .string()
   .trim()
   .regex(/^\d{4}-\d{2}-\d{2}$/, {
@@ -27,8 +27,8 @@ const commitDate = z
     error: "A data não pode estar no futuro",
     abort: true,
   })
-  .refine((value) => value.slice(0, 4) === today().slice(0, 4), {
-    error: "A data precisa ser deste ano",
+  .refine((value) => value >= "1900-01-01", {
+    error: "Escolha uma data a partir de 1900",
   });
 
 export const createCommitSchema = z.object({

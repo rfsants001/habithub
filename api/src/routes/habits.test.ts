@@ -218,10 +218,6 @@ describe("GET /habits — stats por hábito", () => {
   const hoje = today();
   const anoAtual = Number(hoje.slice(0, 4));
   const primeiroDiaDoAno = `${anoAtual}-01-01`;
-  const ontemOuInicioDoAno =
-    hoje === primeiroDiaDoAno
-      ? hoje
-      : formatDate(new Date(new Date().setDate(new Date().getDate() - 1)));
 
   test("a habit with no commits comes with zeros, not missing fields", async () => {
     await given();
@@ -254,34 +250,20 @@ describe("GET /habits — stats por hábito", () => {
     });
   });
 
-  test("totalCommits counts entries, not distinct days", async () => {
+  test("totalCommits counts preserved legacy entries while listing the habit once", async () => {
     const { habit } = await given();
-    await commit(habit.id);
-    await commit(habit.id);
-    await commit(habit.id);
-
-    expect((await listHabits())[0].totalCommits).toBe(3);
-  });
-
-  test("the listing does not duplicate a habit that has many commits", async () => {
-    const { habit } = await given();
-    await commit(habit.id);
-    await commit(habit.id);
-
-    expect(await listHabits()).toHaveLength(1);
+    db.insert(entries).values([{ habitId: habit.id, date: hoje }, { habitId: habit.id, date: hoje }]).run();
+    const listed = await listHabits();
+    expect(listed).toHaveLength(1);
+    expect(listed[0]).toMatchObject({ totalCommits: 2, weekCount: 1 });
   });
 
   test("lastDate is the most recent date, across days", async () => {
     const { habit } = await given();
-    await commit(habit.id, { date: primeiroDiaDoAno });
-    await commit(habit.id, { date: ontemOuInicioDoAno });
+    const dates = [2, 1].map(days => formatDate(new Date(new Date().setDate(new Date().getDate() - days))));
+    for (const date of dates) await commit(habit.id, { date });
     await commit(habit.id);
-
-    expect((await listHabits())[0]).toMatchObject({
-      totalCommits: 3,
-      lastDate: hoje,
-      doneToday: true,
-    });
+    expect((await listHabits())[0]).toMatchObject({ totalCommits: 3, lastDate: hoje, doneToday: true });
   });
 
   test("a backdated-only habit is not done today", async () => {
@@ -307,7 +289,7 @@ describe("GET /habits — stats por hábito", () => {
       })
     ).json();
     await commit(habit.id);
-    await commit(habit.id);
+    await commit(habit.id, { date: formatDate(new Date(new Date().setDate(new Date().getDate() - 1))) });
 
     const listed = await listHabits();
     const academia = listed.find((h: { id: number }) => h.id === habit.id);

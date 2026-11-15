@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { categoriesRepository } from "../repositories/categories";
 import {
@@ -20,7 +21,8 @@ export async function categoryRoutes(app: FastifyInstance) {
       return res.code(404).send({ error: "Categoria não encontrada" });
     }
 
-    const year = new Date().getFullYear();
+    const currentYear = new Date().getFullYear();
+    const { year = currentYear } = z.object({ year: z.coerce.number().int().min(1900).max(currentYear).optional() }).parse(req.query);
     const queryStartedAt = performance.now();
     const entries = findEntriesOfYearByCategory(id, year);
     const queryMs = performance.now() - queryStartedAt;

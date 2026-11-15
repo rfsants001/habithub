@@ -5,7 +5,7 @@
   "private": true,
   "license": "ISC",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "tui": "node scripts/tui.mjs",
@@ -29,6 +29,7 @@
     "seed": "npm --prefix api run seed",
     "seed:demo": "npm --prefix api run seed:demo",
     "setup": "npm --prefix api install && npm --prefix web install",
-    "seed:showcase": "npm --prefix api run seed:showcase"
+    "seed:showcase": "npm --prefix api run seed:showcase",
+    "backup:restore": "npm --prefix api run backup:restore --"
   }
 }

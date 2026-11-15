@@ -12,7 +12,7 @@ Depois escolha o environment no canto superior direito:
 | Environment | Quando |
 |---|---|
 | **Local** | dia a dia, no PC |
-| **LAN** | testar do celular — ajuste o IP se a sua rede mudar |
+| **Self-hosted** | validar o proxy do Compose em `127.0.0.1:8080` |
 
 Suba a API antes (`./scripts/habithub`, ou `npm run dev:api`). As requests da
 pasta Health que passam pelo `proxyUrl` também precisam do Vite no ar.

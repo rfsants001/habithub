@@ -138,30 +138,23 @@ describe("POST /habits/:id/commit — com date (backdating)", () => {
   });
 });
 
-describe("POST /habits/:id/commit — sem dedup (FN-011, comportamento da F1)", () => {
-  test("two commits on the same backdated day ADD UP", async () => {
+describe("POST /habits/:id/commit — safe to retry", () => {
+  test("a second request does not add a day or replace its note", async () => {
     const { habit } = await given();
-
-    await commit(habit.id, { date: primeiroDiaDoAno });
-    const res = await commit(habit.id, { date: primeiroDiaDoAno });
-
-    expect(diaDoGrafo(res.json().weeks, primeiroDiaDoAno)).toMatchObject({
-      total: 2,
-    });
+    const first = await commit(habit.id, { date: primeiroDiaDoAno, message: "nota original" });
+    const again = await commit(habit.id, { date: primeiroDiaDoAno, message: "não substituir" });
+    expect(first.statusCode).toBe(201);
+    expect(again.statusCode).toBe(200);
+    expect(again.json()).toMatchObject({ created: false, entryId: first.json().entryId });
+    expect(diaDoGrafo(again.json().weeks, primeiroDiaDoAno)).toMatchObject({ total: 1 });
+    expect(db.select().from(entries).all()).toMatchObject([{ message: "nota original" }]);
   });
 
-  test("intensity climbs with repetition on the same day", async () => {
+  test("archived habits do not accept new entries", async () => {
     const { habit } = await given();
-
-    let ultimo;
-    for (let i = 0; i < 5; i++) {
-      ultimo = await commit(habit.id, { date: primeiroDiaDoAno });
-    }
-
-    expect(diaDoGrafo(ultimo!.json().weeks, primeiroDiaDoAno)).toMatchObject({
-      total: 5,
-      level: 4,
-    });
+    await inject({ method: "PATCH", url: `/habits/${habit.id}`, payload: { active: false } });
+    expect((await commit(habit.id)).statusCode).toBe(409);
+    expect(db.select().from(entries).all()).toHaveLength(0);
   });
 });
 
@@ -175,12 +168,15 @@ describe("POST /habits/:id/commit — datas rejeitadas (400)", () => {
     expect(res.json().error).toEqual(expect.any(String));
   });
 
-  test("rejects a date outside the graph year", async () => {
-    const { habit } = await given();
-
-    expect((await commit(habit.id, { date: fimDoAnoPassado })).statusCode).toBe(
-      400,
-    );
+  test("a previous year is available in the graph and monthly history", async () => {
+    const { category, habit } = await given();
+    const recorded = await commit(habit.id, { date: fimDoAnoPassado });
+    expect(recorded.statusCode).toBe(201);
+    expect(recorded.json().year).toBe(anoAtual - 1);
+    const month = await inject({ method: "GET", url: `/habits/${habit.id}/history?month=${anoAtual - 1}-12` });
+    expect(month.json().entries).toMatchObject([{ date: fimDoAnoPassado, id: recorded.json().entryId }]);
+    const graph = await inject({ method: "GET", url: `/categories/${category.id}/graph?year=${anoAtual - 1}` });
+    expect(diaDoGrafo(graph.json().weeks, fimDoAnoPassado)).toMatchObject({ total: 1 });
   });
 
   test.each([

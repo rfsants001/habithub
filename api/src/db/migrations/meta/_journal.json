@@ -29,6 +29,13 @@
       "when": 1788636870135,
       "tag": "0003_foamy_adam_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1794712612766,
+      "tag": "0004_product_v1",
+      "breakpoints": true
     }
   ]
 }

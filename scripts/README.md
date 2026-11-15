@@ -15,7 +15,7 @@ Uma CLI gráfica que centraliza **todo comando do projeto**. Se você está digi
 | `--check` | `npm run check` | diagnóstico em texto, sem TTY |
 
 ```
- ▪▪▪ HabitHub control                              http://192.168.1.207:5173
+ ▪▪▪ HabitHub control                              http://127.0.0.1:5173
 
   DESENVOLVIMENTO
    1 Rodar o projeto (API + Web)   split, log separado
@@ -38,7 +38,7 @@ Uma CLI gráfica que centraliza **todo comando do projeto**. Se você está digi
 ```
 ╭ API :3000 ● rodando 2m10 ─────────╮╭ WEB :5173 ● rodando 2m08 ─────────╮
 │ {"level":30,"msg":"commit.criado"}││  VITE v8.2.2  ready in 242 ms     │
-│ ...                               ││  ➜ Network: http://192.168...     │
+│ ...                               ││  ➜ Local: http://127.0.0.1...     │
 ╰───────────────────────────────────╯╰───────────────────────────────────╯
   r reiniciar tudo · 1/2 reiniciar api/web · f focar · c limpar · t tmux · q voltar
 ```

@@ -8,13 +8,13 @@ const hexColor = z
   });
 
 export const createCategorySchema = z.object({
-  name: z.string().trim().min(1, "O nome da categoria não pode ficar vazio"),
+  name: z.string().trim().min(1, "O nome da categoria não pode ficar vazio").max(60, "Use até 60 caracteres"),
   color: hexColor,
 });
 
 export const updateCategorySchema = z
   .object({
-    name: z.string().trim().min(1, "O nome da categoria não pode ficar vazio"),
+    name: z.string().trim().min(1, "O nome da categoria não pode ficar vazio").max(60, "Use até 60 caracteres"),
     color: hexColor,
   })
   .partial()

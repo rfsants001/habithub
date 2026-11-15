@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const categories = sqliteTable("categories", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -16,6 +16,7 @@ export const habits = sqliteTable("habits", {
   categoryId: integer("category_id")
     .notNull()
     .references(() => categories.id),
+  daysPerWeek: integer("days_per_week").notNull().default(7),
   windowStart: text("window_start"),
   windowEnd: text("window_end"),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
@@ -34,4 +35,4 @@ export const entries = sqliteTable("entries", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
   message: text("message"),
-});
+}, (table) => [index("entries_habit_date_idx").on(table.habitId, table.date)]);

@@ -31,3 +31,14 @@ historico-habitos/
 .vscode/*
 .specs
 .claude
+
+# Cópias de dados pessoais e logs de release
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite-*
+*.sqlite3-*
+habithub-backup*.json
+.env.*
+!.env.example
+*.tgz

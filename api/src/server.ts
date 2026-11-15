@@ -3,7 +3,11 @@ import { pathToFileURL } from "node:url";
 import Fastify from "fastify";
 import type { FastifyError } from "fastify";
 import { ZodError } from "zod";
-import cors from "@fastify/cors";
+import { migrateDatabase } from "./db/migrate";
+import { today, weekBounds } from "./db/date";
+import { habitsRepository } from "./repositories/habits";
+import { categoriesRepository } from "./repositories/categories";
+import { exportBackup } from "./db/backup";
 
 import { loggerOptions } from "./logger";
 import { categoryRoutes } from "./routes/categories";
@@ -13,7 +17,24 @@ import { commitRoutes } from "./routes/commits";
 export function createServer() {
   const app = Fastify({ logger: loggerOptions });
 
-  app.register(cors, { origin: true });
+  app.addHook("onRequest", async (req, res) => {
+    res.header("Cache-Control", "no-store");
+    if (["same-site", "cross-site"].includes(String(req.headers["sec-fetch-site"]))) {
+      return res.code(403).send({ error: "Abra o HabitHub em seu endereço habitual." });
+    }
+  });
+
+  app.get("/overview", async () => ({
+    today: today(),
+    week: weekBounds(),
+    categories: categoriesRepository.list(),
+    habits: habitsRepository.list({ includeArchived: true }),
+  }));
+
+  app.get("/backup", async (_req, res) => {
+    res.header("Content-Disposition", 'attachment; filename="habithub-backup.json"');
+    return exportBackup();
+  });
 
   app.get("/health", { logLevel: "silent" }, async () => {
     return { status: "ok" };
@@ -73,11 +94,12 @@ const executadoDireto =
   import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (executadoDireto) {
+  migrateDatabase();
   const app = createServer();
   const port = Number(process.env.PORT ?? 3000);
 
   app
-    .listen({ port, host: "0.0.0.0" })
+    .listen({ port, host: process.env.SERVER_HOST ?? "127.0.0.1" })
     .then((address) =>
       app.log.info(
         { address, pid: process.pid, node: process.version },

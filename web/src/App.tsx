@@ -1,322 +1,173 @@
-import { useCallback, useEffect, useState } from "react";
-import {
-  api,
-  ApiError,
-  fetchGraph,
-  type Category,
-  type CommitResponse,
-  type GraphResponse,
-  type Habit,
-} from "./api/client";
-import { CategoryCard } from "./components/CategoryCard";
-import { CategoryForm } from "./components/CategoryForm";
-import { ConfirmDialog } from "./components/ConfirmDialog";
-import { Fab } from "./components/Fab";
-import { HabitForm } from "./components/HabitForm";
-import { Modal } from "./components/Modal";
-import { ToastHost } from "./components/Toast";
-import { useToasts } from "./lib/useToasts";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { CalendarDays, CircleAlert, CircleCheck, History as HistoryIcon, Layers3, Plus, RefreshCw, Undo2, X } from 'lucide-react';
+import { api, explain, type Habit, type Overview } from './api/client';
+import { longDate } from './lib/date';
+import { Today, type HabitAction } from './product/Today';
+import { History } from './product/History';
+import { Organize } from './product/Organize';
+import { Editor, type EditorState, type Feedback } from './product/Editor';
 
-type Target =
-  | { kind: "category"; category: Category }
-  | { kind: "habit"; habit: Habit };
+const pages = [
+  { id: 'hoje', label: 'Hoje', icon: CalendarDays, description: 'Um espaço para a sua rotina.' },
+  { id: 'historico', label: 'Histórico', icon: HistoryIcon, description: 'Veja o que você fez e quando fez.' },
+  { id: 'organizar', label: 'Organizar', icon: Layers3, description: 'Cuide das suas categorias, hábitos e dados.' },
+] as const;
+type Page = (typeof pages)[number]['id'];
+function readPage(): Page {
+  const hash = location.hash.slice(1);
+  return pages.find(page => hash === page.id)?.id ?? 'hoje';
+}
 
 export default function App() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [habits, setHabits] = useState<Habit[]>([]);
-  const [graphs, setGraphs] = useState<Record<number, GraphResponse>>({});
-
-  const [categoryModal, setCategoryModal] = useState<{
-    open: boolean;
-    editing: Category | null;
-  }>({ open: false, editing: null });
-  const [habitModal, setHabitModal] = useState<{
-    open: boolean;
-    editing: Habit | null;
-  }>({ open: false, editing: null });
-
-  const [target, setTarget] = useState<Target | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [page, setPage] = useState(readPage);
+  const [data, setData] = useState<Overview | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [notification, setNotification] = useState<Feedback | null>(null);
+  const [editor, setEditor] = useState<EditorState | null>(null);
+  const [historyHabit, setHistoryHabit] = useState<number | null>(null);
+  const [revision, setRevision] = useState(0);
+  const [busy, setBusy] = useState<ReadonlySet<number>>(new Set());
+  const [exporting, setExporting] = useState(false);
+  const [undoing, setUndoing] = useState(false);
+  const pendingHabits = useRef(new Set<number>());
+  const undoInFlight = useRef(false);
+  const downloadInFlight = useRef(false);
+  const loadIndex = useRef(0);
+  const opener = useRef<HTMLElement | null>(null);
+  const main = useRef<HTMLElement>(null);
+  const notice = useRef<HTMLDivElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const nextFocus = useRef<'notice' | 'editor-opener' | null>(null);
+  const current = pages.find(item => item.id === page)!;
 
-  const { toasts, notify } = useToasts();
-
-  const doneToday = habits.filter((habit) => habit.doneToday).length;
-
-  const reloadCategories = useCallback(
-    () => api.listCategories().then(setCategories),
-    [],
-  );
-
-  const reloadHabits = useCallback(() => api.listHabits().then(setHabits), []);
-
-  const fetchAll = useCallback(
-    () =>
-      Promise.all([reloadCategories(), reloadHabits()])
-        .then(() => setLoadError(null))
-        .catch((err) =>
-          setLoadError(
-            err instanceof ApiError
-              ? err.message
-              : "Não consegui falar com a API. Ela está rodando?",
-          ),
-        )
-        .finally(() => setLoading(false)),
-    [reloadCategories, reloadHabits],
-  );
-
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
-
-  function retry() {
-    setLoading(true);
-    setLoadError(null);
-    fetchAll();
-  }
-
-  useEffect(() => {
-    for (const category of categories) {
-      fetchGraph(category.id)
-        .then((graph) =>
-          setGraphs((prev) => ({ ...prev, [category.id]: graph })),
-        )
-        .catch(console.error);
-    }
-  }, [categories]);
-
-  function handleCommit(response: CommitResponse) {
-    setGraphs((prev) => {
-      const existing = prev[response.categoryId];
-      if (!existing) return prev;
-
-      return {
-        ...prev,
-        [response.categoryId]: {
-          ...existing,
-          year: response.year,
-          weeks: response.weeks,
-        },
-      };
-    });
-
-    reloadHabits().catch(console.error);
-    notify("Commit registrado");
-  }
-
-  async function confirmDelete() {
-    if (!target) return;
-
-    setDeleting(true);
-    setDeleteError(null);
-
+  const reload = useCallback(async (signal?: AbortSignal) => {
+    const index = ++loadIndex.current;
     try {
-      if (target.kind === "category") {
-        await api.deleteCategory(target.category.id);
-        setGraphs((prev) => {
-          const next = { ...prev };
-          delete next[target.category.id];
-          return next;
-        });
-        await reloadCategories();
-        notify("Categoria excluída");
-      } else {
-        await api.deleteHabit(target.habit.id);
-        await reloadHabits();
-        notify("Hábito excluído");
-      }
-      setTarget(null);
+      const next = await api.overview(signal);
+      if (index !== loadIndex.current || signal?.aborted) return;
+      setData(next); setLoadError(null);
     } catch (err) {
-      setDeleteError(
-        err instanceof ApiError ? err.message : "Falha de conexão",
-      );
-    } finally {
-      setDeleting(false);
+      if (index === loadIndex.current && !signal?.aborted) setLoadError(explain(err));
     }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    queueMicrotask(() => { if (!controller.signal.aborted) void reload(controller.signal); });
+    const refresh = () => { if (document.visibilityState === 'visible') void reload(controller.signal); };
+    const timer = window.setInterval(refresh, 60_000);
+    document.addEventListener('visibilitychange', refresh);
+    return () => { controller.abort(); clearInterval(timer); document.removeEventListener('visibilitychange', refresh); };
+  }, [reload]);
+
+  useEffect(() => {
+    const change = () => {
+      const next = readPage();
+      if (next === page) return;
+      setPage(next); setActionError(null);
+      requestAnimationFrame(() => heading.current?.focus({ preventScroll: true }));
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener('hashchange', change);
+    return () => window.removeEventListener('hashchange', change);
+  }, [page]);
+
+  useEffect(() => {
+    if (nextFocus.current === 'notice' && notification) {
+      nextFocus.current = null;
+      (notice.current?.querySelector<HTMLElement>('.undo-feedback') ?? notice.current)?.focus();
+    } else if (nextFocus.current === 'editor-opener' && !editor) {
+      nextFocus.current = null;
+      if (opener.current?.isConnected && opener.current.getClientRects().length) opener.current.focus();
+      else heading.current?.focus();
+    }
+  }, [notification, editor]);
+
+  function open(next: EditorState) {
+    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setEditor(next); setActionError(null);
   }
-
-  async function afterCategorySaved(message: string) {
-    await reloadCategories();
-    notify(message);
+  const close = () => { nextFocus.current = 'editor-opener'; setEditor(null); };
+  async function changed(feedback: Feedback, moveFocus: boolean) {
+    if (moveFocus) nextFocus.current = 'notice';
+    setNotification(feedback); setActionError(null);
+    setRevision(n => n + 1);
+    await reload();
   }
-
-  async function afterHabitSaved(message: string) {
-    await reloadHabits();
-    notify(message);
+  function lock(id: number) {
+    if (pendingHabits.current.has(id)) return false;
+    pendingHabits.current.add(id); setBusy(new Set(pendingHabits.current)); return true;
   }
-
-  return (
-    <div className="app">
-      <header className="app-header">
-        <img src="/favicon.svg" width="36" height="36" alt="" />
-        <div className="app-title">
-          <h1>HabitHub</h1>
-          <p className="tagline">Cada hábito cumprido é um commit.</p>
-        </div>
-
-        <div className="header-aside">
-          {categories.length > 0 && !loadError && (
-            <div className="graph-legend">
-              <p className="graph-legend-label">commits no dia</p>
-              <p className="graph-legend-scale">
-                menos
-                <span className="graph-legend-cells">
-                  <i data-level="0" />
-                  <i data-level="1" />
-                  <i data-level="2" />
-                  <i data-level="3" />
-                  <i data-level="4" />
-                </span>
-                mais
-              </p>
-            </div>
-          )}
-
-          {habits.length > 0 && (
-            <div className="day-summary">
-              <p className="day-summary-count">
-                <strong>{doneToday}</strong>
-                <span>de {habits.length} hoje</span>
-              </p>
-              <div
-                className="day-bar"
-                role="progressbar"
-                aria-valuenow={doneToday}
-                aria-valuemin={0}
-                aria-valuemax={habits.length}
-                aria-label="Hábitos feitos hoje"
-              >
-                <span
-                  style={{ width: `${(doneToday / habits.length) * 100}%` }}
-                />
-              </div>
-              <p className="day-summary-note">
-                {doneToday === habits.length
-                  ? "tudo feito — bom descanso"
-                  : `faltam ${habits.length - doneToday}`}
-              </p>
-            </div>
-          )}
-        </div>
+  function unlock(id: number) {
+    pendingHabits.current.delete(id); setBusy(new Set(pendingHabits.current));
+  }
+  async function record(habit: Habit) {
+    if (!data || !lock(habit.id)) return;
+    setActionError(null);
+    try {
+      const result = await api.record(habit.id, {});
+      await changed(result.created ? { message: `${habit.name}: registro salvo.`, undo: { habitId: habit.id, entryId: result.entryId } } :
+        { message: `${habit.name} já está registrado hoje.` }, true);
+    } catch (err) { setActionError(explain(err)); }
+    finally { unlock(habit.id); }
+  }
+  async function undo() {
+    if (!notification?.undo || undoInFlight.current) return;
+    const { habitId, entryId } = notification.undo;
+    undoInFlight.current = true; setUndoing(true);
+    try { await api.removeEntry(habitId, entryId); await changed({ message: 'Marcação desfeita.' }, true); }
+    catch (err) { setActionError(explain(err)); }
+    finally { undoInFlight.current = false; setUndoing(false); }
+  }
+  async function restore(habit: Habit) {
+    if (!lock(habit.id)) return;
+    try { await api.updateHabit(habit.id, { active: true }); await changed({ message: 'Hábito restaurado. Ele voltou para Hoje.' }, true); }
+    catch (err) { setActionError(explain(err)); }
+    finally { unlock(habit.id); }
+  }
+  async function download() {
+    if (downloadInFlight.current) return;
+    downloadInFlight.current = true; setExporting(true); setActionError(null);
+    try {
+      const backup = await api.backup();
+      const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
+      const link = document.createElement('a'); link.href = url; link.download = `habithub-backup-${data?.today ?? 'dados'}.json`;
+      document.body.append(link); link.click(); link.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+      setNotification({ message: 'Backup preparado para download.' });
+    } catch (err) { setActionError(explain(err)); }
+    finally { downloadInFlight.current = false; setExporting(false); }
+  }
+  function habitAction(habit: Habit, action: HabitAction) {
+    if (action === 'edit') open({ kind: 'habit', habit });
+    else if (action === 'backdate') open({ kind: 'record', habit });
+    else open({ kind: 'archive', habit });
+  }
+  return <div className="shell">
+    <a className="skip-link" href="#conteudo" onClick={event => { event.preventDefault(); main.current?.focus(); }}>Pular para o conteúdo</a>
+    <aside className="sidebar">
+      <a className="brand" href="#hoje"><img src="/brand.svg" width="40" height="40" alt="" /><span>Habit<span>Hub</span><small>ROTINA NO SEU RITMO</small></span></a>
+      <nav aria-label="Navegação principal">{pages.map(({ id, label, icon: Icon }) => <a href={`#${id}`} key={id} aria-current={page === id ? 'page' : undefined}><Icon size={19} aria-hidden="true" /><span>{label}</span></a>)}</nav>
+      <p className="sidebar-note"><span aria-hidden="true" /> Instância pessoal</p>
+    </aside>
+    <main id="conteudo" className="main" tabIndex={-1} ref={main}>
+      <header className="page-header"><div><p className="page-kicker">{page === 'hoje' && data ? longDate(data.today) : 'HABITHUB / SUA ROTINA'}</p><h1 ref={heading} tabIndex={-1}>{current.label}</h1><p>{current.description}</p></div>
+        {data && <button className="button primary new-habit" onClick={() => open({ kind: 'habit' })}><Plus size={20} aria-hidden="true" /> Novo hábito</button>}
       </header>
-
-      <main>
-        {loadError ? (
-          <div className="state-panel">
-            <h2>A API não respondeu</h2>
-            <p className="tagline">{loadError}</p>
-            <p className="tagline">
-              Suba com <code>npm run dev:api</code> e tente de novo. Seus dados
-              continuam no banco.
-            </p>
-            <button type="button" onClick={retry}>
-              Tentar de novo
-            </button>
-          </div>
-        ) : loading ? (
-          <p className="tagline">Carregando…</p>
-        ) : categories.length === 0 ? (
-          <div className="state-panel">
-            <h2>Nenhuma categoria ainda</h2>
-            <p className="tagline">
-              Categoria é o agrupamento que vira um grafo — Saúde, Estudo,
-              Trabalho. Cada hábito mora dentro de uma, e todo commit pinta o
-              quadradinho do dia.
-            </p>
-            <button
-              type="button"
-              className="state-cta"
-              onClick={() => setCategoryModal({ open: true, editing: null })}
-            >
-              Cadastrar a primeira categoria
-            </button>
-          </div>
-        ) : (
-          <div className="category-grid">
-            {categories.map((category) => (
-              <CategoryCard
-                key={category.id}
-                category={category}
-                graph={graphs[category.id]}
-                habits={habits.filter((h) => h.categoryId === category.id)}
-                onCommit={handleCommit}
-                onEditCategory={(c) =>
-                  setCategoryModal({ open: true, editing: c })
-                }
-                onDeleteCategory={(c) => {
-                  setDeleteError(null);
-                  setTarget({ kind: "category", category: c });
-                }}
-                onEditHabit={(h) => setHabitModal({ open: true, editing: h })}
-                onDeleteHabit={(h) => {
-                  setDeleteError(null);
-                  setTarget({ kind: "habit", habit: h });
-                }}
-                onError={notify}
-              />
-            ))}
-          </div>
-        )}
-      </main>
-
-      <Fab
-        onNewCategory={() => setCategoryModal({ open: true, editing: null })}
-        onNewHabit={() => setHabitModal({ open: true, editing: null })}
-      />
-
-      <Modal
-        open={categoryModal.open}
-        title={
-          categoryModal.editing ? "Editar categoria" : "Cadastrar categoria"
-        }
-        onClose={() => setCategoryModal({ open: false, editing: null })}
-      >
-        <CategoryForm
-          key={categoryModal.editing?.id ?? "new"}
-          editing={categoryModal.editing}
-          onSaved={afterCategorySaved}
-          onClose={() => setCategoryModal({ open: false, editing: null })}
-        />
-      </Modal>
-
-      <Modal
-        open={habitModal.open}
-        title={habitModal.editing ? "Editar hábito" : "Cadastrar hábito"}
-        onClose={() => setHabitModal({ open: false, editing: null })}
-      >
-        <HabitForm
-          key={habitModal.editing?.id ?? "new"}
-          categories={categories}
-          editing={habitModal.editing}
-          onSaved={afterHabitSaved}
-          onClose={() => setHabitModal({ open: false, editing: null })}
-        />
-      </Modal>
-
-      <ConfirmDialog
-        open={target !== null}
-        title={
-          target?.kind === "category" ? "Excluir categoria" : "Excluir hábito"
-        }
-        message={
-          target === null
-            ? ""
-            : target.kind === "category"
-              ? `Excluir a categoria "${target.category.name}"?`
-              : `Excluir o hábito "${target.habit.name}"?`
-        }
-        error={deleteError}
-        busy={deleting}
-        onConfirm={confirmDelete}
-        onClose={() => {
-          setTarget(null);
-          setDeleteError(null);
-        }}
-      />
-
-      <ToastHost toasts={toasts} />
-    </div>
-  );
+      <div className="live-area">
+        <div className={notification ? 'feedback success' : undefined} tabIndex={-1} ref={notice}>
+          <div role="status" className="status-text">{notification && <><CircleCheck size={19} aria-hidden="true" /><span>{notification.message}</span></>}</div>
+          {notification?.undo && <button className="button inline undo-feedback" aria-disabled={undoing || undefined} onClick={() => void undo()}><Undo2 size={17} aria-hidden="true" /> {undoing ? 'Desfazendo…' : 'Desfazer'}</button>}
+          {notification && <button className="icon-button close-feedback" aria-label="Dispensar confirmação" onClick={() => { setNotification(null); heading.current?.focus(); }}><X size={18} /></button>}
+        </div>
+        {actionError && <div className="feedback error" role="alert"><CircleAlert size={19} aria-hidden="true" /><span>{actionError}</span></div>}
+        {loadError && <div className="feedback error" role="alert"><CircleAlert size={19} aria-hidden="true" /><span>{loadError}</span><button className="button" onClick={() => { setLoadError(null); void reload(); }}><RefreshCw size={17} /> Tentar de novo</button></div>}
+      </div>
+      {!data && !loadError && <p className="quiet" role="status">Carregando sua rotina…</p>}
+      {data && page === 'hoje' && <Today data={data} busy={busy} onNew={() => open({ kind: 'habit' })} onRecord={habit => void record(habit)} onAction={habitAction} onHistory={habit => { setHistoryHabit(habit.id); location.hash = 'historico'; }} />}
+      {data && page === 'historico' && <History data={data} habitId={historyHabit} onPick={setHistoryHabit} revision={revision} onRemove={(habit, entry) => open({ kind: 'remove', habit, entry })} />}
+      {data && page === 'organizar' && <Organize data={data} onEdit={open} restoring={busy} exporting={exporting} onRestore={habit => void restore(habit)} onBackup={() => void download()} />}
+    </main>
+    {data && editor && <Editor state={editor} data={data} onClose={close} onSaved={feedback => { setEditor(null); void changed(feedback, true); }} />}
+  </div>;
 }

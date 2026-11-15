@@ -1,0 +1,28 @@
+services:
+  api:
+    build:
+      context: .
+      target: api
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+    volumes:
+      - habits:/data
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 4
+    restart: unless-stopped
+  web:
+    build:
+      context: .
+      target: web
+    ports:
+      - "${HABITHUB_BIND_IP:-127.0.0.1}:${HABITHUB_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  habits:

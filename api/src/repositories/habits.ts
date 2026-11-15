@@ -1,17 +1,21 @@
-import { count, eq, max } from "drizzle-orm";
+import { count, eq, max, sql } from "drizzle-orm";
 import { db } from "../db/client";
-import { today } from "../db/date";
+import { today, weekBounds } from "../db/date";
 import { habits, categories, entries } from "../db/schema";
-import { UpdateHabit } from "./../schemas/habit";
+import type { CreateHabit, UpdateHabit } from "./../schemas/habit";
 
 export const habitsRepository = {
   list: ({ includeArchived = false } = {}) => {
+    const currentDate = today();
+    const { start } = weekBounds();
     const rows = db
       .select({
         id: habits.id,
         name: habits.name,
         categoryId: habits.categoryId,
         active: habits.active,
+        daysPerWeek: habits.daysPerWeek,
+        weekDates: sql<string | null>`group_concat(distinct case when ${entries.date} between ${start} and ${currentDate} then ${entries.date} end)`,
         categoryName: categories.name,
         color: categories.color,
         totalCommits: count(entries.id),
@@ -24,9 +28,10 @@ export const habitsRepository = {
       .groupBy(habits.id)
       .all();
 
-    const hoje = today();
-
-    return rows.map((row) => ({ ...row, doneToday: row.lastDate === hoje }));
+    return rows.map(({ weekDates, ...row }) => {
+      const dates = weekDates?.split(",").sort() ?? [];
+      return { ...row, weekDates: dates, weekCount: dates.length, doneToday: row.lastDate === currentDate };
+    });
   },
 
   update: (id: number, input: UpdateHabit) =>
@@ -35,7 +40,7 @@ export const habitsRepository = {
   findById: (id: number) =>
     db.select().from(habits).where(eq(habits.id, id)).get(),
 
-  create: (input: { name: string; categoryId: number }) =>
+  create: (input: CreateHabit) =>
     db.insert(habits).values(input).returning().get(),
 
   hasEntries: (id: number) => {

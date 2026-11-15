@@ -3,10 +3,9 @@
  * HabitHub Control — TUI que centraliza todo comando do projeto.
  *
  * Rode com `./scripts/habithub`.
- * Zero dependências: só Node ≥ 20 (respeita o ADR-008 — nada de terceiro package.json).
+ * Zero dependências: só Node ≥ 24 (respeita o ADR-008 — nada de terceiro package.json).
  */
 import { existsSync, readdirSync, statSync } from 'node:fs'
-import { networkInterfaces } from 'node:os'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import process from 'node:process'
@@ -34,18 +33,6 @@ function varrer(dir, aceitar, encontrados = []) {
   return encontrados
 }
 
-function ipLan() {
-  for (const enderecos of Object.values(networkInterfaces())) {
-    for (const e of enderecos ?? []) {
-      if (e.family === 'IPv4' && !e.internal && e.address.startsWith('192.168.')) return e.address
-    }
-  }
-  for (const enderecos of Object.values(networkInterfaces())) {
-    for (const e of enderecos ?? []) if (e.family === 'IPv4' && !e.internal) return e.address
-  }
-  return null
-}
-
 function lerContexto() {
   const testes = varrer(join(API, 'src'), (f) => /\.(test|spec)\.ts$/.test(f))
   const fontes = varrer(join(API, 'src'), (f) => f.endsWith('.ts') && !/\.(test|spec)\.ts$/.test(f))
@@ -62,7 +49,6 @@ function lerContexto() {
     arquivosDeTeste: testes.map((f) => relative(API, f)),
     arquivosFonte: fontes.map((f) => relative(API, f)),
     temTestes: testes.length > 0,
-    ip: ipLan(),
   }
 }
 
@@ -79,7 +65,7 @@ const criarServicoApi = () => new Servico({
 
 const criarServicoWeb = () => new Servico({
   nome: 'WEB', cor: C.ciano, porta: 5173,
-  comando: join(WEB, 'node_modules/.bin/vite'), args: ['--host'], cwd: WEB,
+  comando: join(WEB, 'node_modules/.bin/vite'), args: [], cwd: WEB,
 })
 
 async function abrirTmux(quais) {
@@ -217,7 +203,7 @@ async function mostrarStatus(ctx) {
 
   console.log(pintar('  AMBIENTE', C.cinza, C.negrito))
   linha('node', nodeV.saida)
-  linha('IP na LAN', ctx.ip ? `http://${ctx.ip}:5173` : 'não detectado', C.ciano)
+  linha('Web local', 'http://127.0.0.1:5173', C.ciano)
   console.log('')
 
   console.log(pintar('  PROJETO', C.cinza, C.negrito))
@@ -330,7 +316,7 @@ if (process.argv.includes('--check') || process.argv.includes('--status')) {
   console.log('HabitHub Control — diagnóstico\n')
   console.log(`  raiz                 ${ctx.raiz}`)
   console.log(`  node                 ${process.version}`)
-  console.log(`  IP na LAN            ${ctx.ip ?? '(não detectado)'}`)
+  console.log('  Web local            http://127.0.0.1:5173')
   console.log(`  ${marca(ctx.temNodeModulesApi)} api/node_modules`)
   console.log(`  ${marca(ctx.temNodeModulesWeb)} web/node_modules`)
   console.log(`  ${marca(ctx.temServidor)} api/src/server.ts`)

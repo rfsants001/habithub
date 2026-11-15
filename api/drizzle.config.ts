@@ -4,5 +4,5 @@ export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./src/db/migrations",
   dialect: "sqlite",
-  dbCredentials: { url: "habithub.db" },
+  dbCredentials: { url: process.env.DB_FILE ?? "habithub.db" },
 });

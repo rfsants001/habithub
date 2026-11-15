@@ -1,112 +1,47 @@
-import { log } from "../lib/log";
-
-export type Category = {
-  id: number;
-  name: string;
-  color: string;
-  createdAt: string;
+export type Category = { id: number; name: string; color: string };
+export type HabitInput = { name: string; categoryId: number; daysPerWeek: number };
+export type Habit = HabitInput & {
+  id: number; active: boolean; categoryName: string; color: string;
+  weekDates: string[]; weekCount: number; totalCommits: number;
+  lastDate: string | null; doneToday: boolean;
 };
-
-export type Habit = {
-  id: number;
-  name: string;
-  categoryId: number;
-  active: boolean;
-  categoryName: string;
-  color: string;
-  totalCommits: number;
-  lastDate: string | null;
-  doneToday: boolean;
-};
-
-export type Level = 0 | 1 | 2 | 3 | 4;
-export type Day = {
-  date: string;
-  total: number;
-  level: Level;
-  messages: string[];
-};
-export type GraphResponse = {
-  category: { id: number; name: string; color: string };
-  year: number;
-  weeks: (Day | null)[][];
-};
-
-export type CommitResponse = {
-  categoryId: number;
-  year: number;
-  weeks: (Day | null)[][];
-};
-
-export const fetchGraph = (categoryId: number) =>
-  request<GraphResponse>(`/categories/${categoryId}/graph`);
+export type Overview = { today: string; week: { start: string; end: string }; categories: Category[]; habits: Habit[] };
+export type Entry = { id: number; date: string; message: string | null };
+export type Day = { date: string; level: number; total: number };
+export type GraphResponse = { year: number; weeks: (Day | null)[][]; category: Category };
+export type CommitResponse = { created: boolean; entryId: number; date: string };
 
 export class ApiError extends Error {
-  status: number;
-
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-  }
+  readonly status: number;
+  constructor(message: string, status: number) { super(message); this.status = status; }
 }
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`/api${url}`, {
-    headers: {
-      "content-type": "application/json",
-    },
-    ...init,
+async function request<T>(path: string, method = 'GET', body?: unknown, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(`/api${path}`, {
+    method, signal,
+    ...(body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
   });
-
   if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    log.error(
-      `${init?.method ?? "GET"} ${url} -> ${response.status}`,
-      body.error,
-    );
-    throw new ApiError(response.status, body.error ?? "Algo deu errado");
+    const detail = await response.json().catch(() => null) as { error?: string } | null;
+    throw new ApiError(detail?.error ?? 'O HabitHub não conseguiu completar a ação.', response.status);
   }
-
-  return response.status === 204 ? (undefined as T) : response.json();
+  return response.status === 204 ? undefined as T : response.json();
 }
 
 export const api = {
-  listCategories: () => request<Category[]>("/categories"),
-  createCategory: (input: { name: string; color: string }) =>
-    request<Category>("/categories", {
-      method: "POST",
-      body: JSON.stringify(input),
-    }),
-  updateCategory: (id: number, input: { name?: string; color?: string }) =>
-    request<Category>(`/categories/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(input),
-    }),
-  deleteCategory: (id: number) =>
-    request<void>(`/categories/${id}`, {
-      method: "DELETE",
-    }),
-  listHabits: () => request<Habit[]>("/habits"),
-  createHabit: (input: { name: string; categoryId: number }) =>
-    request<Habit>("/habits", {
-      method: "POST",
-      body: JSON.stringify(input),
-    }),
-  updateHabit: (
-    id: number,
-    input: { name?: string; categoryId?: number; active?: boolean },
-  ) =>
-    request<Habit>(`/habits/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(input),
-    }),
-  deleteHabit: (id: number) =>
-    request<void>(`/habits/${id}`, {
-      method: "DELETE",
-    }),
-  commit: (habitId: number, input: { date?: string; message?: string } = {}) =>
-    request<CommitResponse>(`/habits/${habitId}/commit`, {
-      method: "POST",
-      body: JSON.stringify(input),
-    }),
+  overview: (signal?: AbortSignal) => request<Overview>('/overview', 'GET', undefined, signal),
+  createCategory: (input: Omit<Category, 'id'>) => request<Category>('/categories', 'POST', input),
+  updateCategory: (id: number, input: Omit<Category, 'id'>) => request<Category>(`/categories/${id}`, 'PATCH', input),
+  deleteCategory: (id: number) => request<void>(`/categories/${id}`, 'DELETE'),
+  createHabit: (input: HabitInput) => request<Habit>(`/habits`, 'POST', input),
+  updateHabit: (id: number, input: Partial<HabitInput & { active: boolean }>) => request<Habit>(`/habits/${id}`, 'PATCH', input),
+  record: (id: number, input: { date?: string; message?: string }) => request<CommitResponse>(`/habits/${id}/commit`, 'POST', input),
+  removeEntry: (habitId: number, id: number) => request<void>(`/habits/${habitId}/entries/${id}`, 'DELETE'),
+  month: (id: number, month: string, signal: AbortSignal) => request<{ month: string; entries: Entry[] }>(`/habits/${id}/history?month=${month}`, 'GET', undefined, signal),
+  graph: (id: number, year: number, signal: AbortSignal) => request<GraphResponse>(`/categories/${id}/graph?year=${year}`, 'GET', undefined, signal),
+  backup: () => request<unknown>('/backup'),
 };
+
+export function explain(error: unknown) {
+  return error instanceof ApiError ? error.message : 'Não foi possível conectar. Confira se o HabitHub está rodando e tente de novo.';
+}
