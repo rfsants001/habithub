@@ -64,10 +64,13 @@ Use Node.js 24 and npm. `better-sqlite3` may need Python and C/C++ build tools o
 
 ```sh
 npm run setup
-npm run dev:api  # Terminal 1
-npm run dev:web  # Terminal 2
+npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173). The API uses `api/habithub.db` by default. Run `npm run verify` and `npm run build` to check your changes.
+Open [http://localhost:5173](http://localhost:5173). `npm run dev` starts the API and the web app in one terminal. Press Ctrl+C to stop both. Run `npm run setup` after pulling changes to either lockfile.
+
+Use `npm run dev:api` or `npm run dev:web` to run a single service. Set `PORT` for the API or `WEB_PORT` for the web app if the defaults (`3000` and `5173`) are in use. The API uses `api/habithub.db` by default.
+
+Run `npm run verify` and `npm run build` to check your changes. `npm run tui` opens the optional interactive control panel.
 
 The UI uses React, TypeScript and [Lucide](https://lucide.dev/). The API uses Fastify and SQLite. See the [product notes](docs/product.md) and [accessibility checklist](docs/accessibility.md) for more on the design and roadmap.

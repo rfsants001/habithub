@@ -19,6 +19,9 @@ const AQUI = dirname(fileURLToPath(import.meta.url))
 const RAIZ = resolve(AQUI, '..')
 const API = join(RAIZ, 'api')
 const WEB = join(RAIZ, 'web')
+const API_PORT = Number(process.env.PORT ?? 3000)
+const WEB_PORT = Number(process.env.WEB_PORT ?? 5173)
+const WEB_URL = `http://127.0.0.1:${WEB_PORT}`
 
 // ── contexto do projeto ────────────────────────────────────────────────────
 
@@ -41,8 +44,8 @@ function lerContexto() {
     raiz: RAIZ, api: API, web: WEB,
     temServidor: existsSync(join(API, 'src/server.ts')),
     temWeb: existsSync(join(WEB, 'package.json')),
-    temNodeModulesApi: existsSync(join(API, 'node_modules')),
-    temNodeModulesWeb: existsSync(join(WEB, 'node_modules')),
+    temNodeModulesApi: existsSync(join(API, 'node_modules/tsx/package.json')),
+    temNodeModulesWeb: ['vite', 'lucide-react'].every(dependency => existsSync(join(WEB, 'node_modules', dependency, 'package.json'))),
     temBanco: existsSync(join(API, 'habithub.db')),
     temMigrations: existsSync(join(API, 'src/db/migrations')),
     temSeed: existsSync(join(API, 'src/seed.ts')),
@@ -59,12 +62,12 @@ function lerContexto() {
 // e o log fica sem o cabeçalho do npm. Os scripts do package.json seguem valendo
 // pra quem rodar na mão — a TUI só não depende deles.
 const criarServicoApi = () => new Servico({
-  nome: 'API', cor: C.magenta, porta: 3000,
+  nome: 'API', cor: C.magenta, porta: API_PORT,
   comando: join(API, 'node_modules/.bin/tsx'), args: ['watch', 'src/server.ts'], cwd: API,
 })
 
 const criarServicoWeb = () => new Servico({
-  nome: 'WEB', cor: C.ciano, porta: 5173,
+  nome: 'WEB', cor: C.ciano, porta: WEB_PORT,
   comando: join(WEB, 'node_modules/.bin/vite'), args: [], cwd: WEB,
 })
 
@@ -203,7 +206,7 @@ async function mostrarStatus(ctx) {
 
   console.log(pintar('  AMBIENTE', C.cinza, C.negrito))
   linha('node', nodeV.saida)
-  linha('Web local', 'http://127.0.0.1:5173', C.ciano)
+  linha('Web local', WEB_URL, C.ciano)
   console.log('')
 
   console.log(pintar('  PROJETO', C.cinza, C.negrito))
@@ -233,20 +236,20 @@ async function principal() {
     const motivoApi = 'falta api/src/server.ts (task PH-1-001)'
 
     const escolha = await menu({
-      titulo: ctx.ip ? `http://${ctx.ip}:5173` : '',
+      titulo: WEB_URL,
       itens: [
         { separador: 'DESENVOLVIMENTO' },
         { id: 'dev', rotulo: 'Rodar o projeto (API + Web)', dica: 'split, log separado',
           desativado: semServidor, motivo: motivoApi },
-        { id: 'dev-api', rotulo: 'Só a API', dica: ':3000', desativado: semServidor, motivo: motivoApi },
-        { id: 'dev-web', rotulo: 'Só o Web', dica: ':5173' },
+        { id: 'dev-api', rotulo: 'Só a API', dica: `:${API_PORT}`, desativado: semServidor, motivo: motivoApi },
+        { id: 'dev-web', rotulo: 'Só o Web', dica: `:${WEB_PORT}` },
         { separador: 'QUALIDADE' },
         { id: 'testes', rotulo: 'Testes e cobertura…', dica: 'rodar, filtrar por arquivo, coverage' },
         { id: 'qualidade', rotulo: 'Typecheck e lint…', dica: 'o gate do PR' },
         { separador: 'DADOS' },
         { id: 'banco', rotulo: 'Banco…', dica: 'migrations, studio, seed' },
         { separador: 'PROJETO' },
-        { id: 'status', rotulo: 'Status', dica: 'branch, IP, o que já existe' },
+        { id: 'status', rotulo: 'Status', dica: 'branch, endereço local e dependências' },
         { id: 'sair', rotulo: 'Sair' },
       ],
       rodape: semServidor
@@ -260,7 +263,7 @@ async function principal() {
 
       case 'dev':
         await abrirPainel([criarServicoApi(), criarServicoWeb()], {
-          ip: ctx.ip ? `http://${ctx.ip}:5173` : '',
+          ip: WEB_URL,
           aoSairParaTmux: () => abrirTmux(['api', 'web']),
         })
         break
@@ -271,7 +274,7 @@ async function principal() {
 
       case 'dev-web':
         await abrirPainel([criarServicoWeb()], {
-          ip: ctx.ip ? `http://${ctx.ip}:5173` : '',
+          ip: WEB_URL,
           aoSairParaTmux: () => abrirTmux(['web']),
         })
         break
@@ -316,9 +319,10 @@ if (process.argv.includes('--check') || process.argv.includes('--status')) {
   console.log('HabitHub Control — diagnóstico\n')
   console.log(`  raiz                 ${ctx.raiz}`)
   console.log(`  node                 ${process.version}`)
-  console.log('  Web local            http://127.0.0.1:5173')
+  console.log(`  Web local            ${WEB_URL}`)
   console.log(`  ${marca(ctx.temNodeModulesApi)} api/node_modules`)
   console.log(`  ${marca(ctx.temNodeModulesWeb)} web/node_modules`)
+  if (!ctx.temNodeModulesApi || !ctx.temNodeModulesWeb) console.log('  Rode npm run setup para instalar as dependências.')
   console.log(`  ${marca(ctx.temServidor)} api/src/server.ts`)
   console.log(`  ${marca(ctx.temMigrations)} migrations`)
   console.log(`  ${marca(ctx.temBanco)} habithub.db`)
@@ -337,8 +341,7 @@ if (!process.stdin.isTTY) {
   process.exit(1)
 }
 
-// Atalhos que pulam o menu e abrem o painel direto — é o que `npm run dev`,
-// `npm run dev:api` e `npm run dev:web` da raiz usam.
+// Atalhos para abrir o painel direto com `npm run tui -- --dev`.
 const ATALHOS = {
   '--dev': () => [criarServicoApi(), criarServicoWeb()],
   '--dev-api': () => [criarServicoApi()],
@@ -358,7 +361,7 @@ if (atalho) {
   tela.entrarAlt()
   tela.esconderCursor()
   await abrirPainel(ATALHOS[atalho](), {
-    ip: ctx.ip ? `http://${ctx.ip}:5173` : '',
+    ip: WEB_URL,
     aoSairParaTmux: () => abrirTmux(atalho === '--dev' ? ['api', 'web'] : [atalho.slice(6)]),
   })
   restaurar()

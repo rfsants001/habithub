@@ -22,6 +22,16 @@ jobs:
       - run: npm --prefix web ci
       - run: npm run verify
       - run: npm run build
+      - name: Start development servers without a TTY
+        env:
+          DB_FILE: ":memory:"
+          PORT: 13000
+          WEB_PORT: 15173
+        run: |
+          timeout --kill-after=5s 35s npm run dev </dev/null &
+          runner=$!
+          trap 'kill "$runner" 2>/dev/null || true; wait "$runner" 2>/dev/null || true' EXIT
+          curl --fail --silent --show-error --retry 20 --retry-delay 1 --retry-connrefused --max-time 2 http://127.0.0.1:15173/api/health | grep -F '"status":"ok"'
       - run: docker compose config -q
       - run: docker compose up -d --build --wait
       - run: |

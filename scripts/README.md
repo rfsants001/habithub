@@ -10,8 +10,8 @@ Uma CLI gráfica que centraliza **todo comando do projeto**. Se você está digi
 
 | Flag | Equivalente na raiz | Faz |
 |---|---|---|
-| `--dev` | `npm run dev` | abre direto o painel split API+Web |
-| `--dev-api` / `--dev-web` | — | painel de um serviço só |
+| `--dev` | `npm run tui -- --dev` | abre direto o painel split API+Web |
+| `--dev-api` / `--dev-web` | `npm run tui -- --dev-api` / `npm run tui -- --dev-web` | painel de um serviço só |
 | `--check` | `npm run check` | diagnóstico em texto, sem TTY |
 
 ```
@@ -27,7 +27,7 @@ Uma CLI gráfica que centraliza **todo comando do projeto**. Se você está digi
   DADOS
    6 Banco…                        migrations, studio, seed
   PROJETO
-   7 Status                        branch, IP, o que já existe
+   7 Status                        branch, endereço local e dependências
    8 Sair
 ```
 
@@ -70,14 +70,16 @@ A tabela sai do `coverage-summary.json`; as linhas descobertas saem do `coverage
 ## Sem TTY
 
 ```bash
-./scripts/habithub --check     # mostra o que a TUI detectou, em texto
+npm run setup
+npm run dev                  # sobe a API e o Web com logs no terminal
+npm run check                # mostra as dependências e os caminhos detectados
 ```
 
-Útil pra responder "por que a opção *Rodar o projeto* está cinza?" — geralmente porque falta `api/src/server.ts`.
+`npm run dev:api` e `npm run dev:web` sobem os serviços separadamente. Use `PORT` e `WEB_PORT` para trocar as portas padrão 3000 e 5173.
 
 ## Decisões de implementação
 
-- **Zero dependências npm.** Só Node ≥ 20 e ANSI escrito à mão. Um terceiro `package.json` aqui contrariaria o ADR-008 (dois pacotes, sem monorepo) e traria manutenção de dependência pra um script utilitário. O custo é `lib/ui.mjs` — ~250 linhas de primitivas de terminal.
+- **Zero dependências npm.** Só Node ≥ 24 e ANSI escrito à mão. Um terceiro `package.json` aqui contrariaria o ADR-008 (dois pacotes, sem monorepo) e traria manutenção de dependência pra um script utilitário. O custo é `lib/ui.mjs` — ~250 linhas de primitivas de terminal.
 - **O split é desenhado aqui, não delegado ao tmux.** Assim funciona em qualquer terminal, sem configuração. Quem quer tmux de verdade aperta `t`.
 - **Os dev servers são chamados pelos binários locais** (`node_modules/.bin/tsx`, `node_modules/.bin/vite`), não por `npm run`. Uma camada a menos na árvore de processos — foi o `npm` intermediário que deixava o Vite órfão segurando a porta 5173 no `q`. Os scripts do `package.json` continuam valendo pra quem roda na mão.
 - **Processos morrem pelo grupo** (`kill(-pid)`, com `detached: true`), e escalonam pra `SIGKILL` depois de 2s. Dev server que ignora `SIGTERM` deixaria a porta ocupada e o próximo start falharia.
@@ -90,7 +92,8 @@ Quase sempre é uma entrada no array de `itens` do menu certo em [`tui.mjs`](tui
 
 ```
 scripts/
-├── habithub          # wrapper bash (checa Node ≥ 20)
+├── habithub          # wrapper bash (checa Node ≥ 24)
+├── dev.mjs           # inicialização com logs comuns
 ├── tui.mjs           # menus, contexto do projeto, ações
 └── lib/
     ├── ui.mjs        # ANSI: cores, medição de largura, caixas, menu, prompt
