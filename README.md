@@ -1,51 +1,73 @@
-<div align="center">
-
-<img src="web/public/brand.svg" alt="" width="64" height="64">
+<p align="center">
+  <img src="docs/banner.webp" width="100%" alt="HabitHub — Build habits on your terms. A self-hosted habit tracker." />
+</p>
 
 # HabitHub
 
-**Sua rotina, no seu ritmo.**
+**Track your habits and see your progress, one square at a time.** HabitHub is a personal habit tracker that runs on your own computer or server. Check in from a desktop or mobile browser, see when you followed through, and keep your history in a local SQLite database. The app is in Brazilian Portuguese and requires no account.
 
-Marque o que você fez hoje e veja sua rotina ganhar cor, um quadradinho de cada vez.
+[Install](#install) · [Your first habit](#your-first-habit) · [Screenshots](#screenshots) · [Backups and remote access](#backups-and-remote-access)
 
-</div>
+## What you can do
 
-O HabitHub é um app de hábitos para uso pessoal. Ele roda na sua própria máquina ou servidor, guarda os dados em SQLite e funciona no navegador de computador e celular. A interface é em português e a instalação padrão dispensa cadastro e serviços de terceiros.
+- **Plan around your week.** Set habits you want to do daily or pick a weekly target such as three workouts. Choose the days as you go.
+- **Check in with one click.** Mark a habit as done, undo a mistake, or add a past check-in with an optional note.
+- **See the days you showed up.** Open a monthly calendar for a specific habit or use the annual heatmap to see activity across a category.
+- **Keep a record when your routine changes.** Archive and restore habits without losing their history, and export your data as JSON.
 
-- **Hoje:** crie um hábito, registre em um toque e desfaça se precisar. Escolha entre todo dia e uma frequência flexível de dias por semana.
-- **Histórico:** consulte os dias marcados no calendário de cada hábito ou veja o mapa anual de uma categoria. É possível registrar em datas anteriores e incluir uma nota.
-- **Organizar:** edite categorias, arquive e restaure hábitos sem perder o histórico e baixe uma cópia dos seus dados.
+## Install
 
-![Tela Hoje do HabitHub com hábitos fictícios](docs/preview.png)
-
-## Rodar na sua máquina
-
-Com Docker e Compose:
+Install Git and [Docker with Compose](https://docs.docker.com/compose/install/) before running these commands.
 
 ```sh
+git clone https://github.com/rfsants001/habithub.git
+cd habithub
 docker compose up -d --build
 ```
 
-Abra `http://localhost:8080`. A interface e a API ficam no mesmo endereço; por padrão, o acesso é permitido apenas a partir da própria máquina. O volume `habits` guarda o SQLite entre reinicializações. As migrações são executadas na inicialização, inclusive para bancos do MVP.
+Open [http://localhost:8080](http://localhost:8080) on the same machine. The first build may take a few minutes. Compose stores your data in the `habits` volume, and HabitHub applies database migrations at startup.
 
-Para usar por outro aparelho, configure o acesso com uma VPN privada ou um proxy com HTTPS e autenticação na frente de **toda a aplicação**, incluindo `/api`. O HabitHub é para uma pessoa por instância e não tem autenticação própria. **Código público e instância pública são escolhas diferentes**: não exponha seu histórico à internet. Veja [self-hosting e recuperação](docs/self-hosting.md).
+## Your first habit
 
-## Desenvolvimento
+1. On **Hoje** (Today), select **Novo hábito** (New habit). Give it a name and choose or create a category.
+2. Pick **Todo dia** (Every day) or **Alguns dias por semana** (Some days per week). Weekly goals count distinct days from Monday to Sunday.
+3. After doing the habit, select **Marcar como feito** (Mark as done). Use **Desfazer** (Undo) if you clicked by mistake. For a past date, open the habit’s options and choose **Registrar em outra data** (Log another date).
+4. Open **Histórico** (History) to find the days you checked in. Select a habit for its monthly calendar or a category for its annual heatmap.
 
-Requer Node.js 24 e npm. A API usa `better-sqlite3`, que pode precisar de Python e ferramentas C/C++ se não houver binário para sua plataforma.
+Use **Organizar** (Organize) to manage categories, restore archived habits, or download a backup.
+
+## Screenshots
+
+![The Today screen with example habits, weekly progress and one-click check-ins](docs/preview.png)
+
+<details>
+  <summary>See HabitHub on a phone</summary>
+  <br />
+  <img src="docs/preview-mobile.webp" width="340" alt="HabitHub in a mobile browser. A weekly workout goal and daily habits appear on the Today screen." />
+</details>
+
+## Backups and remote access
+
+| Task | How to do it |
+| --- | --- |
+| Back up your history | Go to **Organizar → Backup → Baixar backup** to download a JSON file. |
+| Restore a backup | Use the restore command in the [self-hosting guide](docs/self-hosting.md#fazer-backup-e-restaurar) with a fresh database. |
+| Access it from your phone | Put the whole app behind a private VPN or an authenticated HTTPS reverse proxy. The default setup listens on `127.0.0.1` and serves one person per instance. |
+| Change the port or time zone | Set `HABITHUB_PORT` or `TZ` in `.env`. The default port is `8080` and the default time zone is `America/Sao_Paulo`. |
+| Update HabitHub | Download a backup, run `git pull --ff-only` in your checkout, then run `docker compose up -d --build` again. |
+
+For details on remote access, database migration and recovery, see the [self-hosting guide in Portuguese](docs/self-hosting.md).
+
+## Develop locally
+
+Use Node.js 24 and npm. `better-sqlite3` may need Python and C/C++ build tools on platforms without a prebuilt binary.
 
 ```sh
 npm run setup
-npm run dev:api  # terminal 1
-npm run dev:web  # terminal 2
+npm run dev:api  # Terminal 1
+npm run dev:web  # Terminal 2
 ```
 
-Abra `http://localhost:5173`. A API usa `api/habithub.db` por padrão, sem preencher dados de demonstração. Para uma demo separada:
+Open [http://localhost:5173](http://localhost:5173). The API uses `api/habithub.db` by default. Run `npm run verify` and `npm run build` to check your changes.
 
-```sh
-DB_FILE=/tmp/habithub-demo.db npm run db:migrate
-DB_FILE=/tmp/habithub-demo.db npm run seed:showcase
-DB_FILE=/tmp/habithub-demo.db npm run dev:api
-```
-
-Antes de contribuir, rode `npm run verify` e `npm run build`. Para estrutura dos pacotes, acessibilidade e planos futuros, veja [notas de produto](docs/product.md) e [roteiro de acessibilidade](docs/accessibility.md). Os ícones são da biblioteca [Lucide](https://lucide.dev/).
+The UI uses React, TypeScript and [Lucide](https://lucide.dev/). The API uses Fastify and SQLite. See the [product notes](docs/product.md) and [accessibility checklist](docs/accessibility.md) for more on the design and roadmap.
