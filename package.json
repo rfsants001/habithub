@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "App de hábitos com a estética do contribution graph do GitHub — orquestrador dos pacotes api/ e web/",
   "private": true,
-  "license": "ISC",
+  "license": "MIT",
   "engines": {
     "node": ">=24"
   },
