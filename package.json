@@ -1,9 +1,9 @@
 {
   "name": "habithub",
-  "version": "1.0.0",
+  "version": "0.1.0-beta",
   "description": "App de hábitos com a estética do contribution graph do GitHub — orquestrador dos pacotes api/ e web/",
   "private": true,
-  "license": "ISC",
+  "license": "MIT",
   "engines": {
     "node": ">=24"
   },

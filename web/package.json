@@ -1,7 +1,7 @@
 {
   "name": "habithub-web",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0-beta",
   "description": "HabitHub Web — Vite + React 19 + TypeScript",
   "type": "module",
   "engines": {
