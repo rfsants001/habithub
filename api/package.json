@@ -1,8 +1,8 @@
 {
   "name": "habithub-api",
-  "version": "1.0.0",
+  "version": "0.1.0-beta",
   "description": "HabitHub API — Fastify + TypeScript + Drizzle/SQLite",
-  "license": "ISC",
+  "license": "MIT",
   "author": "",
   "private": true,
   "type": "module",
